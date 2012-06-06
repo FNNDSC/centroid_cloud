@@ -1,13 +1,16 @@
 #!/usr/bin/env python
 
-Gstr_matrixType = 'lower'
-Gb_saveFig      = False
-
 from    pylab import *
 import  numpy as np
 import  getopt
 import  sys
 
+
+Gstr_matrixType = 'lower'
+Gb_saveFig      = False
+
+
+C_cloud         = C_centroidCloud('file.txt')
 
 def synopsis_show():
     print "USAGE:"

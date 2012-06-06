@@ -73,6 +73,19 @@ class C_centroidCloud:
         self._dict_stats['stdX']    = np.std(self._M_C[:,0])
         self._dict_stats['stdY']    = np.std(self._M_C[:,1])
 
+    def stats_calc(self):
+        # Assumes that the cloud is in row order, i.e.
+        #    x1    y1
+        #    x2    y2
+        #      ...
+        #    xn     yn
+        #
+        rows, cols = self._M_C.shape
+        for dim in np.arange(0, cols):
+            self._dict_stats['mean'] = np.mean(self._M_C, 0)
+            self._dict_stats['std']  = np.std(self._M_C, 0)
+            
+
     def __init__( self, *args, **kwargs ):
         self.__name__       = 'C_centroidCloud'
         self._v_centroid    = np.zeros( (1, 2) )
@@ -85,9 +98,7 @@ class C_centroidCloud:
         self._M_C   = np.genfromtxt(self._str_file)
         
         self._dict_stats            = {}
-        self._dict_stats['meanX']   = 0.0
-        self._dict_stats['stdX']    = 0.0
-        self._dict_stats['meanY']   = 0.0
-        self._dict_stats['stdY']    = 0.0
+        self._dict_stats['mean']    = []
+        self._dict_stats['std']     = []
         self._f_dev                 = 1.0
-                                    
+        self._numRotations          = 90                            
