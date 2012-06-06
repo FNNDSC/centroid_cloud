@@ -9,80 +9,85 @@ import  getopt
 import  sys
 
 
-def synopsis_show():
-    print "USAGE:"
+class C_centroidCloud:
+    # 
+    # Class member variables -- if declared here are shared
+    # across all instances of this class
+    #
+    mdictErr = {
+        'Keys'          : {
+            'action'        : 'initializing base class, ',
+            'error'         : 'it seems that no member keys are defined.',
+            'exitCode'      : 10},
+        'Save'              : {
+            'action'        : 'attempting to pickle save self, ',
+            'error'         : 'a PickleError occured',
+            'exitCode'      : 12},
+        'SaveMat'           : {
+            'action'        : 'attempting to save MatLAB friendly spectrum, ',
+            'error'         : 'an IOerror occured',
+            'exitCode'      : 13},
+        'Load'              : {
+            'action'        : 'attempting to pickle load object, ',
+            'error'         : 'a PickleError occured',
+            'exitCode'      : 14}
+    }
 
-def deviation_plot(M_P, str_fillColor = 'red', str_edgeColor = 'black'):
-   f_meanX = np.mean(M_P[:,0])
-   f_stdX  = np.std(M_P[:,0])
-   f_meanY = np.mean(M_P[:,1])
-   f_stdY  = np.std(M_P[:,1])
-   rect    = Rectangle([f_meanX - f_stdX/2, f_meanY - f_stdY/2], 
-                        f_stdX, f_stdY,
-                        facecolor = str_fillColor,
-                        edgecolor = str_edgeColor)
-   gca().add_patch(rect)
-   return rect
+    def dprint( self, level, str_txt ):
+        """
+            Simple "debug" print... based on verbosity level.
+        """
+        if level <= self.m_verbosity: print str_txt
 
-try:
-    opts, remargs   = getopt.getopt(sys.argv[1:], 'hxm:s')
-except getopt.GetoptError:
-    sys.exit(1)
+    def verbosity_set( self, level ):
+        self.m_verbosity = level
 
-for o, a in opts:
-    if (o == '-x' or o == '-h'):
-        synopsis_show()
-        sys.exit(1)
-    if (o == '-m'):
-        Gstr_matrixType = a
-    if (o == '-s'):
-        Gb_saveFig = True
+    def error_exit( self,
+                            astr_key,
+                            ab_exitToOs=1
+                            ):
+        print "%s:: FATAL ERROR" % self.mstr_obj
+        print "\tSorry, some error seems to have occurred in <%s::%s>" \
+                        % ( self.__name__, self.mstr_def )
+        print "\tWhile %s" % C_centroidCloud.mdictErr[astr_key]['action']
+        print "\t%s" % C_centroidCloud.mdictErr[astr_key]['error']
+        print ""
+        if ab_exitToOs:
+            print "Returning to system with error code %d" % \
+                            C_centroidCloud.mdictErr[astr_key]['exitCode']
+            sys.exit( C_centroidCloud.mdictErr[astr_key]['exitCode'] )
+        return C_centroidCloud.mdictErr[astr_key]['exitCode']
 
-M_cNr = np.genfromtxt('iter_c1_u1-Normal-r-%s.crd' % Gstr_matrixType)
-M_cNg = np.genfromtxt('iter_c1_u1-Normal-g-%s.crd' % Gstr_matrixType)
-M_cNb = np.genfromtxt('iter_c1_u1-Normal-b-%s.crd' % Gstr_matrixType)
+    def fatal( self, astr_key, astr_extraMsg="" ):
+        if len( astr_extraMsg ): print astr_extraMsg
+        self.error_exit( astr_key )
 
-M_cPr = np.genfromtxt('iter_c1_u1-PMG-r-%s.crd' % Gstr_matrixType)
-M_cPg = np.genfromtxt('iter_c1_u1-PMG-g-%s.crd' % Gstr_matrixType)
-M_cPb = np.genfromtxt('iter_c1_u1-PMG-b-%s.crd' % Gstr_matrixType)
+    def warn( self, astr_key, astr_extraMsg="" ):
+        b_exitToOS = 0
+        if len( astr_extraMsg ): print astr_extraMsg
+        self.error_exit( astr_key, b_exitToOS )
 
-figure()
-#axis([0.2, 0.6, 0.4, 0.8])
-grid()
+    def stats_determine(self):
+        self._dict_stats['meanX']   = np.mean(self._M_C[:,0])
+        self._dict_stats['meanY']   = np.mean(self._M_C[:,1])
+        self._dict_stats['stdX']    = np.std(self._M_C[:,0])
+        self._dict_stats['stdY']    = np.std(self._M_C[:,1])
 
-p1, = plot(M_cNr[:,0], M_cNr[:,1], color='#FF0000', marker='*', ls='None');
-p2, = plot(M_cNg[:,0], M_cNg[:,1], color='#00FF00', marker='*', ls='None');
-p3, = plot(M_cNb[:,0], M_cNb[:,1], color='#0000FF', marker='*', ls='None');
+    def __init__( self, *args, **kwargs ):
+        self.__name__       = 'C_centroidCloud'
+        self._v_centroid    = np.zeros( (1, 2) )
+        self._angleSteps    = 90
+        
+        self._str_file      = ''
+        for key, value in kwargs.iteritems():
+            if key == 'file':   self._str_file = value
 
-nRr = deviation_plot(M_cNr, '#FF0000')
-nRg = deviation_plot(M_cNg, '#00FF00')
-nRb = deviation_plot(M_cNb, '#0000FF')
-
-plot(M_cPr[:,0], M_cPr[:,1], color='#770000', marker='+', ls='None');
-plot(M_cPg[:,0], M_cPg[:,1], color='#007700', marker='+', ls='None');
-plot(M_cPb[:,0], M_cPb[:,1], color='#000077', marker='+', ls='None');
-
-pRr = deviation_plot(M_cPr, '#770000')
-pRg = deviation_plot(M_cPg, '#007700')
-pRb = deviation_plot(M_cPb, '#000077')
-
-xlabel('X-centroid position')
-ylabel('Y-centroid position')
-l1 = legend([nRr, nRg, nRb], ['red - normal', 'green - normal', 'blue - normal'],
-        loc = 3)
-l2 = legend([pRr, pRg, pRb], ['red - PMG', 'green - PMG', 'blue - PMG'], 
-        loc = 4)
-gca().add_artist(l1)
-title('Centroid distributions for the %s matrix after evolution' % Gstr_matrixType)
-
-if Gb_saveFig:
-    print "Saving figure to png and eps...", 
-    savefig('centroids-%s.png' % Gstr_matrixType)
-    savefig('centroids-%s.eps' % Gstr_matrixType)
-    print "Done."
-
-show()
-
-#raw_input('Press any key to exit...\n')
-
-
+        self._M_C   = np.genfromtxt(self._str_file)
+        
+        self._dict_stats            = {}
+        self._dict_stats['meanX']   = 0.0
+        self._dict_stats['stdX']    = 0.0
+        self._dict_stats['meanY']   = 0.0
+        self._dict_stats['stdY']    = 0.0
+        self._f_dev                 = 1.0
+                                    
