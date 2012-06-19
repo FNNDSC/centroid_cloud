@@ -1,16 +1,12 @@
 #!/usr/bin/env python
 
 from    pylab import *
-import  numpy as np
 import  getopt
-import  sys
 
+from    C_centroidCloud import *
 
-Gstr_matrixType = 'lower'
+Gstr_matrixType = 'rand.txt'
 Gb_saveFig      = False
-
-
-C_cloud         = C_centroidCloud('file.txt')
 
 def synopsis_show():
     print "USAGE:"
@@ -41,51 +37,7 @@ for o, a in opts:
     if (o == '-s'):
         Gb_saveFig = True
 
-M_cNr = np.genfromtxt('iter_c1_u1-Normal-r-%s.crd' % Gstr_matrixType)
-M_cNg = np.genfromtxt('iter_c1_u1-Normal-g-%s.crd' % Gstr_matrixType)
-M_cNb = np.genfromtxt('iter_c1_u1-Normal-b-%s.crd' % Gstr_matrixType)
-
-M_cPr = np.genfromtxt('iter_c1_u1-PMG-r-%s.crd' % Gstr_matrixType)
-M_cPg = np.genfromtxt('iter_c1_u1-PMG-g-%s.crd' % Gstr_matrixType)
-M_cPb = np.genfromtxt('iter_c1_u1-PMG-b-%s.crd' % Gstr_matrixType)
-
-figure()
-#axis([0.2, 0.6, 0.4, 0.8])
-grid()
-
-p1, = plot(M_cNr[:,0], M_cNr[:,1], color='#FF0000', marker='*', ls='None');
-p2, = plot(M_cNg[:,0], M_cNg[:,1], color='#00FF00', marker='*', ls='None');
-p3, = plot(M_cNb[:,0], M_cNb[:,1], color='#0000FF', marker='*', ls='None');
-
-nRr = deviation_plot(M_cNr, '#FF0000')
-nRg = deviation_plot(M_cNg, '#00FF00')
-nRb = deviation_plot(M_cNb, '#0000FF')
-
-plot(M_cPr[:,0], M_cPr[:,1], color='#770000', marker='+', ls='None');
-plot(M_cPg[:,0], M_cPg[:,1], color='#007700', marker='+', ls='None');
-plot(M_cPb[:,0], M_cPb[:,1], color='#000077', marker='+', ls='None');
-
-pRr = deviation_plot(M_cPr, '#770000')
-pRg = deviation_plot(M_cPg, '#007700')
-pRb = deviation_plot(M_cPb, '#000077')
-
-xlabel('X-centroid position')
-ylabel('Y-centroid position')
-l1 = legend([nRr, nRg, nRb], ['red - normal', 'green - normal', 'blue - normal'],
-        loc = 3)
-l2 = legend([pRr, pRg, pRb], ['red - PMG', 'green - PMG', 'blue - PMG'], 
-        loc = 4)
-gca().add_artist(l1)
-title('Centroid distributions for the %s matrix after evolution' % Gstr_matrixType)
-
-if Gb_saveFig:
-    print "Saving figure to png and eps...", 
-    savefig('centroids-%s.png' % Gstr_matrixType)
-    savefig('centroids-%s.eps' % Gstr_matrixType)
-    print "Done."
-
-show()
-
-#raw_input('Press any key to exit...\n')
+C_cloud         = C_centroidCloud(file='%s' % Gstr_matrixType)
+C_cloud.confidenceBoundary_find()
 
 
