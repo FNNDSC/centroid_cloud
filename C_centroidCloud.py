@@ -129,7 +129,7 @@ class C_centroidCloud:
         M_rot[0,0]  = math.cos(af_theta);   M_rot[0,1] = -math.sin(af_theta)
         M_rot[1,0]  = math.sin(af_theta);   M_rot[1,1] =  math.cos(af_theta)
         M_Ctr       = aM.transpose()
-        M_Crot      = M_rot * M_Ctr
+        M_Crot      = np.dot(M_rot, M_Ctr)
         return M_Crot.transpose()
     
     def projectionsOnAxes_find(self, adict_stats):
@@ -140,13 +140,13 @@ class C_centroidCloud:
         Returns: ((x_min, x_max), (y_min, y_max), ... )
         """
         dims = len(adict_stats['mean'])
-        v_ret = np.zeros(1, dims, dtype='object')
+        v_ret = np.zeros( (1, dims), dtype='object')
         for dim in np.arange(0, dims):
             v_projection = np.array([adict_stats['mean'][dim] - 
                                      adict_stats['std'][dim] * self._f_dev,
                                      adict_stats['mean'][dim] + 
                                      adict_stats['std'][dim] * self._f_dev])
-            v_ret[dim] = v_projection # copy?
+            v_ret[0, dim] = v_projection # copy?
         return v_ret
     
     def projectionsOnAxes_rotate(self, av_projection, af_theta):
@@ -165,13 +165,13 @@ class C_centroidCloud:
         
         # First, pack the line endpoints into a coordinate-pair matrix
         # structure
-        dimensionality = len(av_projection)
-        M_p             = np.zeros( (2*dimensionality, dimensionality) )
+        M_p             = np.zeros( (2*self._M_Cdimensionality, self._M_Cdimensionality) )
         index           = 0
-        for dim in np.arange(0, dimensionality):
+        for dim in np.arange(0, self._M_Cdimensionality):
             for endpoint in [0, 1]:
-                M_p[index, dim] = av_projection[dim][0, endpoint]
+                M_p[index, dim] = av_projection[0, dim][endpoint]
                 index += 1
+        M_p = M_p + self._dict_stats['mean']
         # Now rotate the end points by <af_theta>
         M_p_rot = self.rot_2D(M_p, af_theta)
         return M_p_rot
@@ -192,8 +192,8 @@ class C_centroidCloud:
             # First, rotation the cloud by -r_rad:
             neg_C   = self.rot_2D(self._M_C, -f_rad)
             # Now find the projections on the standard x/y axis:
-            _dict_stats = self.stats_calc(neg_C)
-            v_projections = self.projectionsOnAxes_find(_dict_stats)
+            self._dict_stats = self.stats_calc(neg_C)
+            v_projections = self.projectionsOnAxes_find(self._dict_stats)
             M_p = self.projectionsOnAxes_rotate(v_projections, f_rad)
             self._dict_Q1[rotation] = M_p[1,:]
             self._dict_Q2[rotation] = M_p[3,:]
@@ -207,6 +207,7 @@ class C_centroidCloud:
         has been read.
         """
         self._M_Crows, self._M_Ccols = self._M_C.shape
+        self._M_Cdimensionality = self._M_Ccols
         self._rotationKeys      = range(0, self._numRotations)
         self._dict_rotationVal  = misc.dict_init(self._rotationKeys, 
                                                  self._rotationKeys)
@@ -234,6 +235,7 @@ class C_centroidCloud:
         self._M_C                   = np.genfromtxt(self._str_file)
         self._M_Crows               = -1
         self._M_Ccols               = -1
+        self._M_Cdimensionality     = 0
         
         self._dict_stats            = {}
         self._dict_stats['mean']    = []
