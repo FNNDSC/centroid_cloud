@@ -146,7 +146,7 @@ class C_centroidCloud:
                                      adict_stats['std'][dim] * self._f_dev,
                                      adict_stats['mean'][dim] + 
                                      adict_stats['std'][dim] * self._f_dev])
-            v_ret[0, dim] = v_projection # copy?
+            v_ret[0, dim] = v_projection
         return v_ret
     
     def projectionsOnAxes_rotate(self, av_projection, af_theta):
@@ -215,9 +215,14 @@ class C_centroidCloud:
         """
         self._M_Crows, self._M_Ccols = self._M_C.shape
         self._M_Cdimensionality = self._M_Ccols
+        # The numRotations defines the number of rotations between 
+        # 0 and 90 degrees (i.e. the first quadrant). This is used
+        # to create a dictionary of rotationKeys and rotationVals
         self._rotationKeys      = range(0, self._numRotations)
+        v_keys                  = np.array(self._rotationKeys)
+        v_vals                  = v_keys * 90/self._numRotations
         self._dict_rotationVal  = misc.dict_init(self._rotationKeys, 
-                                                 self._rotationKeys)
+                                                 list(v_vals))
         self._dict_projection   = misc.dict_init(self._rotationKeys, 
                                         np.zeros( (self._M_Ccols, self._M_Ccols),
                                                   dtype = 'object'))
