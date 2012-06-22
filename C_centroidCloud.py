@@ -37,7 +37,11 @@ class C_centroidCloud:
         'Load'              : {
             'action'        : 'attempting to pickle load object, ',
             'error'         : 'a PickleError occured',
-            'exitCode'      : 14}
+            'exitCode'      : 14},
+        'Rotations'         : {
+            'action'        : 'intializing base class, ',
+            'error'         : 'numRotations must be at least 1.',
+            'exitCode'      : 20},
     }
 
     def dprint( self, level, str_txt ):
@@ -53,9 +57,9 @@ class C_centroidCloud:
                             astr_key,
                             ab_exitToOs=1
                             ):
-        print "%s:: FATAL ERROR" % self.mstr_obj
-        print "\tSorry, some error seems to have occurred in <%s::%s>" \
-                        % ( self.__name__, self.mstr_def )
+        print "FATAL ERROR"
+        print "\tSorry, some error seems to have occurred in <%s>::%s" \
+                        % ( self.__name__, self.__proc__ )
         print "\tWhile %s" % C_centroidCloud.mdictErr[astr_key]['action']
         print "\t%s" % C_centroidCloud.mdictErr[astr_key]['error']
         print ""
@@ -213,6 +217,9 @@ class C_centroidCloud:
         once the number of rotations has been set and/or a new cloud
         has been read.
         """
+        if self._numRotations < 1:
+            self.fatal('Rotations')
+        
         self._M_Crows, self._M_Ccols = self._M_C.shape
         self._M_Cdimensionality = self._M_Ccols
         # The numRotations defines the number of rotations between 
@@ -277,6 +284,7 @@ class C_centroidCloud:
        
     def __init__( self, *args, **kwargs ):
         self.__name__       = 'C_centroidCloud'
+        self.__proc__       = "__init__"
         self._v_centroid    = np.zeros( (1, 2) )
 
         self._M_Crows               = -1

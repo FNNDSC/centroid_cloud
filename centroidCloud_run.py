@@ -36,13 +36,11 @@ for o, a in opts:
 
 C_cloud         = C_centroidCloud(file='%s' % Gstr_matrixType, 
                                   stdWidth  = 0.5,
-                                  rotations = 1)
+                                  rotations = 90)
 C_cloud.confidenceBoundary_find()
 
 M_cloud         = C_cloud.cloud()
 l_polygonPoints = C_cloud.boundary()
-
-print l_polygonPoints
 
 figure()
 grid() 
