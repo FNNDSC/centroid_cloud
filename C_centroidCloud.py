@@ -153,13 +153,13 @@ class C_centroidCloud:
         """
         Rotate projections in a reference axis frame by <af_theta>.
         
-        Returns a matrix:
+        Returns a rotated matrix:
             +-                           -+            \
             | dim0_min_projection_rotated |    <-- QIII \  
             | dim0_max_projection_rotated |    <-- Q1     > 2D
             | dim1_min_projection_rotated |    <-- QIV  /
             | dim1_max_projection_rotated |    <-- QII /
-            |            ...              |           
+            |            ...              |          / 
             +-                           -+
         """
         
@@ -171,7 +171,10 @@ class C_centroidCloud:
             for endpoint in [0, 1]:
                 M_p[index, dim] = av_projection[0, dim][endpoint]
                 index += 1
-        M_p = M_p + self._dict_stats['mean']
+        M_center        = np.tile(self._dict_stats['mean'], (2* self._M_Cdimensionality, 1))
+        M_mask          = np.logical_not(M_p).astype(float)
+        M_centerMask    = M_center * M_mask
+        M_p             = M_p + M_centerMask
         # Now rotate the end points by <af_theta>
         M_p_rot = self.rot_2D(M_p, af_theta)
         return M_p_rot
@@ -184,7 +187,8 @@ class C_centroidCloud:
         For each rotation angle in the internal dictionary, rotate the cloud,
         find the projections on the xy axes, then rotate the projections back.
         
-        Return a clock-wise set of boundary polygon points.
+        Store a counterclock-wise set of boundary polygon points:
+        Q1->Q2->Q3->Q4 in the self._l_boundary list
         """
         for rotation in self._rotationKeys:
             f_angle = self._dict_rotationVal[rotation]
@@ -195,11 +199,14 @@ class C_centroidCloud:
             self._dict_stats = self.stats_calc(neg_C)
             v_projections = self.projectionsOnAxes_find(self._dict_stats)
             M_p = self.projectionsOnAxes_rotate(v_projections, f_rad)
-            self._dict_Q1[rotation] = M_p[1,:]
-            self._dict_Q2[rotation] = M_p[3,:]
-            self._dict_Q3[rotation] = M_p[0,:]
-            self._dict_Q4[rotation] = M_p[2,:]
-    
+            self._dict_Q[1][rotation] = M_p[1,:]
+            self._dict_Q[2][rotation] = M_p[3,:]
+            self._dict_Q[3][rotation] = M_p[0,:]
+            self._dict_Q[4][rotation] = M_p[2,:]
+        for quadrant in range(1, 5):
+            for rotation in self._rotationKeys:
+                self._l_boundary.append(self._dict_Q[quadrant][rotation])
+        
     def initialize(self):            
         """
         (Re)builds internal dictionary structures. Typically called
@@ -215,24 +222,58 @@ class C_centroidCloud:
                                         np.zeros( (self._M_Ccols, self._M_Ccols),
                                                   dtype = 'object'))
         # 2D Planar quadrant projections
-        self._dict_Q1           = misc.dict_init(self._rotationKeys,
-                                        np.zeros( (1, 2) ))
-        self._dict_Q2           = misc.dict_init(self._rotationKeys,
-                                        np.zeros( (1, 2) ))
-        self._dict_Q3           = misc.dict_init(self._rotationKeys,
-                                        np.zeros( (1, 2) ))
-        self._dict_Q4           = misc.dict_init(self._rotationKeys,
-                                        np.zeros( (1, 2) ))
+        for quadrant in range(1,5):
+            self._dict_Q[quadrant] = misc.dict_init(self._rotationKeys,
+                                        np.zeros( (1,2) ))
+    def boundary(self, *args):
+        """
+        Get/set the boundary points.
+        """
+        if len(args):
+            self._l_boundary = args[0]
+        else:
+            return self._l_boundary
+
+    def cloud(self, *args):
+        """
+        Get/set the cloud points.
         
+        If set, trigger a re-initialization of system.
+        """
+        if len(args):
+            self._M_C = args[0]
+            self.initialize()
+        else:
+            return self._M_C
+        
+    def deviationWidth(self, *args):    
+        """
+        Get/set the deviation width.
+        
+        If set, trigger a re-initialization of system.
+        """
+        if len(args):
+            self._f_dev = args[0]
+            self.initialize()
+        else:
+            return self._f_dev
+
+    def rotations(self, *args):    
+        """
+        Get/set the number of rotations.
+        
+        If set, trigger a re-initialization of system.
+        """
+        if len(args):
+            self._numRotations = args[0]
+            self.initialize()
+        else:
+            return self._numRotations
+       
     def __init__( self, *args, **kwargs ):
         self.__name__       = 'C_centroidCloud'
         self._v_centroid    = np.zeros( (1, 2) )
-        
-        self._str_file      = ''
-        for key, value in kwargs.iteritems():
-            if key == 'file':   self._str_file = value
 
-        self._M_C                   = np.genfromtxt(self._str_file)
         self._M_Crows               = -1
         self._M_Ccols               = -1
         self._M_Cdimensionality     = 0
@@ -241,13 +282,21 @@ class C_centroidCloud:
         self._dict_stats['mean']    = []
         self._dict_stats['std']     = []
         self._f_dev                 = 1.0
+        
+        self._str_file              = ''
+        self._numRotations          = 90
+        self._b_deg                 = True
+        for key, value in kwargs.iteritems():
+            if key == 'file':       self._str_file      = value
+            if key == 'rotations':  self._numRotations  = value
+            if key == 'stdWidth':   self._f_dev         = value
+
+        self._M_C                   = np.genfromtxt(self._str_file)
 
         # The rotations are set/controlled by _numRotations which defines
         # the number of rotations between 0 and 90 degrees. The rotation values
         # are stored in _dict_rotationVals, indexed by _rotationKeys. In the
         # trivial (default) case, the rotation vals and keys are identical.
-        self._b_deg                 = True
-        self._numRotations          = 90
         self._rotationKeys          = []
         self._dict_rotationVal      = {}
         self._dict_projection       = {}
@@ -263,10 +312,8 @@ class C_centroidCloud:
         #          Q3  |  Q4
         #              |
         #
-        self._dict_Q1               = {}
-        self._dict_Q2               = {}
-        self._dict_Q3               = {}
-        self._dict_Q4               = {}
+        self._dict_Q                = {1: {}, 2: {}, 3:{}, 4:{}}
+        self._l_boundary            = []
         
         self.initialize()
         

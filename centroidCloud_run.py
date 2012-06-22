@@ -1,7 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
 
-from    pylab import *
+from    pylab   import *
+import  numpy   as np
 import  getopt
+import  sys
 
 from    C_centroidCloud import *
 
@@ -11,17 +13,12 @@ Gb_saveFig      = False
 def synopsis_show():
     print "USAGE:"
 
-def deviation_plot(M_P, str_fillColor = 'red', str_edgeColor = 'black'):
-    f_meanX = np.mean(M_P[:,0])
-    f_stdX  = np.std(M_P[:,0])
-    f_meanY = np.mean(M_P[:,1])
-    f_stdY  = np.std(M_P[:,1])
-    rect    = Rectangle([f_meanX - f_stdX/2, f_meanY - f_stdY/2], 
-                        f_stdX, f_stdY,
+def deviation_plot(al_points, str_fillColor = 'red', str_edgeColor = 'black'):
+    poly    = Polygon(al_points,
                         facecolor = str_fillColor,
                         edgecolor = str_edgeColor)
-    gca().add_patch(rect)
-    return rect
+    gca().add_patch(poly)
+    return poly
 
 try:
     opts, remargs   = getopt.getopt(sys.argv[1:], 'hxm:s')
@@ -37,7 +34,18 @@ for o, a in opts:
     if (o == '-s'):
         Gb_saveFig = True
 
-C_cloud         = C_centroidCloud(file='%s' % Gstr_matrixType)
+C_cloud         = C_centroidCloud(file='%s' % Gstr_matrixType, 
+                                  stdWidth  = 0.5,
+                                  rotations = 90)
 C_cloud.confidenceBoundary_find()
 
+M_cloud         = C_cloud.cloud()
+l_polygonPoints = C_cloud.boundary()
 
+figure()
+grid() 
+
+p1, = plot(M_cloud[:,0], M_cloud[:,1], color='#FF0000', marker='*', ls='None')
+poly    = deviation_plot(l_polygonPoints) 
+ 
+show()
