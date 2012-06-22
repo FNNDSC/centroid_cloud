@@ -169,13 +169,15 @@ class C_centroidCloud:
         
         # First, pack the line endpoints into a coordinate-pair matrix
         # structure
-        M_p             = np.zeros( (2*self._M_Cdimensionality, self._M_Cdimensionality) )
+        M_p             = np.zeros( (2*self._M_Cdimensionality, 
+                                     self._M_Cdimensionality) )
         index           = 0
         for dim in np.arange(0, self._M_Cdimensionality):
             for endpoint in [0, 1]:
                 M_p[index, dim] = av_projection[0, dim][endpoint]
                 index += 1
-        M_center        = np.tile(self._dict_stats['mean'], (2* self._M_Cdimensionality, 1))
+        M_center        = np.tile(self._dict_stats['mean'], 
+                                  (2* self._M_Cdimensionality, 1))
         M_mask          = np.logical_not(M_p).astype(float)
         M_centerMask    = M_center * M_mask
         M_p             = M_p + M_centerMask
