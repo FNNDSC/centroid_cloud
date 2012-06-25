@@ -1,0 +1,7 @@
+cloud_create.py -n 100000 -s box.txt 
+cloud_create.py -n 100000 -s linearX.txt -d linearX
+cloud_create.py -n 100000 -s linearX.txt -d linearX
+cloud_create.py -n 100000 -s quadX.txt -d quadX
+cloud_create.py -n 100000 -s linearXscaled.txt -d linearXscaled
+cloud_create.py -n 100000 -s quadXscaled.txt -d quadXscaled
+cloud_create.py -n 100000 -s circle.txt -d circle
