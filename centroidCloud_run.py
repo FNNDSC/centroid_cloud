@@ -7,21 +7,74 @@ import  sys
 
 from    C_centroidCloud import *
 
-Gstr_matrixType = 'rand.txt'
-Gb_saveFig      = False
+Gstr_synopsis = """
+    
+    NAME
+ 
+        centroidCloud_run.py
+        
+    SYNOPSIS
+    
+        centroidCloud_run.py    -m <cloudFile>   \\
+                                -r <rotations>   \\
+                                -s <stdWidth>    \\
+                                -e -d            \\
+                                -x -h
+                                
+    DESCRIPTION
+    
+        centroidCloud_run.py is a simple "driver" for the C_centroidCloud
+        class. This class accepts a file defining a cloud of points in a 
+        2D space, and then returns a polygon of points defining the projection
+        of the cloud deviation along a set of rotated axes.
+        
+        In the default case, there are 90 rotations corresponding to a 1 degree
+        sweep through the 1st Cartesian quadrant.
+        
+    ARGUMENTS
+    
+        -m <cloudFile>
+        The cloud file to read.
+        
+        -r <rotations>
+        The number of rotations, evenly spread out between 0...90 degrees.
+        
+        -s <stdWidth>
+        The width of the standard deviation cloud
+        
+        -e
+        If specified, print an extent report that gives for each rotation
+        the X, Y, XY, and X+Y projection extent. This is an approximation
+        for the max/min extent angle for the given cloud.
+        
+        -d
+        If specified, pass a debug flag to the C_centroidCloud class that
+        triggers additional reporting.
+        
+        -x or -h
+        Print this help page.
+        
+"""
+
+Gstr_cloudMatrix    = 'cloud.txt'
+Gb_saveFig          = False
+Gb_debugCloud       = False
+Gb_extentReport     = False
+G_numRotations      = 90
+G_f_stdWidth        = 0.5
 
 def synopsis_show():
-    print "USAGE:"
+    print "USAGE: %s" % Gstr_synopsis
 
 def deviation_plot(al_points, str_fillColor = 'red', str_edgeColor = 'black'):
     poly    = Polygon(al_points,
                         facecolor = str_fillColor,
-                        edgecolor = str_edgeColor)
+                        edgecolor = str_edgeColor, zorder=3)
     gca().add_patch(poly)
     return poly
 
 try:
-    opts, remargs   = getopt.getopt(sys.argv[1:], 'hxm:s')
+    opts, remargs   = getopt.getopt(sys.argv[1:], 'hxm:s:r:de')
 except getopt.GetoptError:
     sys.exit(1)
 
@@ -30,22 +83,32 @@ for o, a in opts:
         synopsis_show()
         sys.exit(1)
     if (o == '-m'):
-        Gstr_matrixType = a
+        Gstr_cloudMatrix = a
     if (o == '-s'):
-        Gb_saveFig = True
+        G_f_stdWidth    = float(a)
+    if (o == '-r'):
+        G_numRotations  = int(a)
+    if (o == '-d'):
+        Gb_debugCloud   = True
+    if (o == '-e'):
+        Gb_extentReport = True
 
-C_cloud         = C_centroidCloud(file='%s' % Gstr_matrixType, 
-                                  stdWidth  = 0.5,
-                                  rotations = 90)
+C_cloud         = C_centroidCloud(file='%s' % Gstr_cloudMatrix, 
+                                  stdWidth  = G_f_stdWidth,
+                                  rotations = G_numRotations)
+C_cloud.debug(Gb_debugCloud)
 C_cloud.confidenceBoundary_find()
-
 M_cloud         = C_cloud.cloud()
 l_polygonPoints = C_cloud.boundary()
 
 figure()
+axis('equal')
 grid() 
 
-p1, = plot(M_cloud[:,0], M_cloud[:,1], color='#FF0000', marker='*', ls='None')
-poly    = deviation_plot(l_polygonPoints) 
+p1,     = plot(M_cloud[:,0], M_cloud[:,1], color='#FF0000', marker='*', ls='None',
+               zorder = 1)
+poly    = deviation_plot(l_polygonPoints, 'green') 
  
+if Gb_extentReport: print C_cloud.projectionExtent_report()
 show()
+
