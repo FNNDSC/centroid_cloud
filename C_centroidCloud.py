@@ -144,13 +144,13 @@ class C_centroidCloud:
         Returns: ((x_min, x_max), (y_min, y_max), ... )
         """
         dims = len(adict_stats['mean'])
-        v_ret = np.zeros( (1, dims), dtype='object')
+        v_ret = np.zeros( (dims), dtype='object')
         for dim in np.arange(0, dims):
             v_projection = np.array([adict_stats['mean'][dim] - 
                                      adict_stats['std'][dim] * self._f_dev,
                                      adict_stats['mean'][dim] + 
                                      adict_stats['std'][dim] * self._f_dev])
-            v_ret[0, dim] = v_projection
+            v_ret[dim] = v_projection
         return v_ret
     
     def projectionsOnAxes_rotate(self, av_projection, af_theta):
@@ -174,7 +174,7 @@ class C_centroidCloud:
         index           = 0
         for dim in np.arange(0, self._M_Cdimensionality):
             for endpoint in [0, 1]:
-                M_p[index, dim] = av_projection[0, dim][endpoint]
+                M_p[index, dim] = av_projection[dim][endpoint]
                 index += 1
         M_center        = np.tile(self._dict_stats['mean'], 
                                   (2* self._M_Cdimensionality, 1))
@@ -184,6 +184,49 @@ class C_centroidCloud:
         # Now rotate the end points by <af_theta>
         M_p_rot = self.rot_2D(M_p, af_theta)
         return M_p_rot
+
+    def projectionExtent_find(self, av_projections):
+        """
+        Simply calculate "distance" between the min/max points on 
+        a projection for all the dimensions.
+        
+        Return the extent in an array, indexed by dimension
+        """
+        v_extent    = np.zeros(self._M_Cdimensionality)
+        for dim in np.arange(0, self._M_Cdimensionality):
+            v_extent[dim] = av_projections[dim][1] - av_projections[dim][0]
+        return v_extent
+    
+    def extent_init(self, v_extent):
+        self._dict_extent2D['X']['min']     = v_extent[0] 
+        self._dict_extent2D['X']['max']     = v_extent[0] 
+        self._dict_extent2D['Y']['min']     = v_extent[1] 
+        self._dict_extent2D['Y']['max']     = v_extent[1] 
+        self._dict_extent2D['XY']['min']    = v_extent[0] * v_extent[1]
+        self._dict_extent2D['XY']['max']    = v_extent[0] * v_extent[1]
+        self._dict_extent2D['X+Y']['min']   = v_extent[0] + v_extent[1]
+        self._dict_extent2D['X+Y']['max']   = v_extent[0] + v_extent[1]
+
+    def extent_process(self, key, f_extent, rotation):
+        if self._dict_extent2D[key]['min'] >= f_extent:
+            self._dict_extent2D[key]['min'] = f_extent
+            self._dict_extent2D[key]['minAngle'] = rotation
+        if self._dict_extent2D[key]['max'] <= f_extent:
+            self._dict_extent2D[key]['max'] = f_extent
+            self._dict_extent2D[key]['maxAngle'] = rotation
+              
+    def projectionExtent_report(self):
+        """
+        Return a string that reports on the min/max extents on the X, Y axes
+        """
+        str_ret = ""
+        for key in self._dict_extent2D.keys():
+            for str_val in ['min', 'max']: 
+                str_ret += "%s %3s projection @ angle = %10.5f @ %5.2f\n" % \
+                            (str_val, key, 
+                             self._dict_extent2D[key][str_val],
+                             self._dict_extent2D[key]['%sAngle' % str_val])
+        return str_ret
 
     def confidenceBoundary_find(self):
         """
@@ -195,6 +238,9 @@ class C_centroidCloud:
         
         Store a counterclock-wise set of boundary polygon points:
         Q1->Q2->Q3->Q4 in the self._l_boundary list
+        
+        NOTE:
+        * Only properly debugged for planar (i.e. 2D) boundaries.
         """
         for rotation in self._rotationKeys:
             f_angle = self._dict_rotationVal[rotation]
@@ -204,6 +250,24 @@ class C_centroidCloud:
             # Now find the projections on the standard x/y axis:
             self._dict_stats = self.stats_calc(neg_C)
             v_projections = self.projectionsOnAxes_find(self._dict_stats)
+            v_extent = self.projectionExtent_find(v_projections)
+            if self._b_debug:
+                print "%f %f %f %f %f" % (self._dict_rotationVal[rotation], 
+                                        v_extent[0], v_extent[1], 
+                                        v_extent[0] + v_extent[1],
+                                        v_extent[0] * v_extent[1])
+            if rotation == 0: self.extent_init(v_extent)
+            for key in self._dict_extent2D.keys():
+                if key == 'X':      self.extent_process('X', v_extent[0], 
+                                        self._dict_rotationVal[rotation])
+                if key == 'Y':      self.extent_process('Y', v_extent[1], 
+                                        self._dict_rotationVal[rotation])
+                if key == 'X+Y':    self.extent_process('X+Y', 
+                                        v_extent[0] + v_extent[1], 
+                                        self._dict_rotationVal[rotation])
+                if key == 'XY':     self.extent_process('XY', 
+                                        v_extent[0] * v_extent[1], 
+                                        self._dict_rotationVal[rotation])
             M_p = self.projectionsOnAxes_rotate(v_projections, f_rad)
             self._dict_Q[1][rotation] = M_p[1,:]
             self._dict_Q[2][rotation] = M_p[3,:]
@@ -229,7 +293,7 @@ class C_centroidCloud:
         # to create a dictionary of rotationKeys and rotationVals
         self._rotationKeys      = range(0, self._numRotations)
         v_keys                  = np.array(self._rotationKeys)
-        v_vals                  = v_keys * 90/self._numRotations
+        v_vals                  = v_keys * 90.0/self._numRotations
         self._dict_rotationVal  = misc.dict_init(self._rotationKeys, 
                                                  list(v_vals))
         self._dict_projection   = misc.dict_init(self._rotationKeys, 
@@ -272,6 +336,15 @@ class C_centroidCloud:
         else:
             return self._f_dev
 
+    def debug(self, *args):    
+        """
+        Get/set the debugging flag.
+        """
+        if len(args):
+            self._b_debug = args[0]
+        else:
+            return self._b_debug
+    
     def rotations(self, *args):    
         """
         Get/set the number of rotations.
@@ -287,6 +360,8 @@ class C_centroidCloud:
     def __init__( self, *args, **kwargs ):
         self.__name__       = 'C_centroidCloud'
         self.__proc__       = "__init__"
+        self._b_debug       = False
+        
         self._v_centroid    = np.zeros( (1, 2) )
 
         self._M_Crows               = -1
@@ -329,6 +404,18 @@ class C_centroidCloud:
         #
         self._dict_Q                = {1: {}, 2: {}, 3:{}, 4:{}}
         self._l_boundary            = []
+        
+        #
+        #
+        # Properties of the distribution on a single planar surface
+        #
+        self._dict_minMax2D         = {'min': 0.0, 'minAngle': 0.0, 
+                                       'max': 0.0, 'maxAngle': 0.0}
+        self._dict_extent2D         = {'X':     self._dict_minMax2D.copy(),
+                                       'Y':     self._dict_minMax2D.copy(),
+                                       'XY':    self._dict_minMax2D.copy(),
+                                       'X+Y':   self._dict_minMax2D.copy()}
+        
         
         self.initialize()
         
