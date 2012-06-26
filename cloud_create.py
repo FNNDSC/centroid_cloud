@@ -61,6 +61,9 @@ Gstr_synopsis= """
         
         Valid functions include:
         
+        o 'scaleX':
+            Each y-value of the cloud is scaled by the corresponding
+            x-value. This creates a right-angled triangle.
         o 'linearX': 
             Each y-value of the cloud is increased by the current   
             x-value. This creates a cloud that is skewed "upwards".
@@ -84,6 +87,7 @@ Gstr_synopsis= """
 
 _dict_distrib = {
     'None':             lambda p: np.array(p),
+    'scaleX':           lambda p: np.column_stack((p[:,0],p[:,1] * p[:,0])),
     'linearX':          lambda p: np.column_stack((p[:,0],p[:,1] + p[:,0])),
     'linearXscaled':    lambda p: np.column_stack((p[:,0],(p[:,1] + p[:,0]) * p[:,0])),
     'quadX':            lambda p: np.column_stack((p[:,0],p[:,1] + p[:,0]**2)), 
