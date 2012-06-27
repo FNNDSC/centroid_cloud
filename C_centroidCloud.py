@@ -244,7 +244,7 @@ class C_centroidCloud:
         """
         for rotation in self._rotationKeys:
             f_angle = self._dict_rotationVal[rotation]
-            f_rad   = f_angle * np.pi / 180
+            f_rad   = np.deg2rad(f_angle)
             # First, rotation the cloud by -r_rad:
             neg_C   = self.rot_2D(self._M_C, -f_rad)
             # Now find the projections on the standard x/y axis:
