@@ -18,8 +18,9 @@ Gstr_synopsis = """
         centroidCloud_run.py    -m <cloudFile>   \\
                                 -r <rotations>   \\
                                 -s <stdWidth>    \\
+                                -z <zorder>      \\
                                 -e -d            \\
-                                -x -h
+                                -x -h            
                                 
     DESCRIPTION
     
@@ -51,6 +52,12 @@ Gstr_synopsis = """
         If specified, pass a debug flag to the C_centroidCloud class that
         triggers additional reporting.
         
+        -z <zorder>
+        Change the 'z' ordering. By default, the confidence boundary is drawn
+        "on top" of the point plots with a default zorder=3. By specifying 
+        a different zorder (such as '-z 1'), the boundary can be drawn below 
+        the point plots.
+                
         -x or -h
         Print this help page.
         
@@ -60,6 +67,7 @@ Gstr_cloudMatrix    = 'cloud.txt'
 Gb_saveFig          = False
 Gb_debugCloud       = False
 Gb_extentReport     = False
+Gi_zorder           = 3
 G_numRotations      = 90
 G_f_stdWidth        = 0.5
 
@@ -69,12 +77,12 @@ def synopsis_show():
 def deviation_plot(al_points, str_fillColor = 'red', str_edgeColor = 'black'):
     poly    = Polygon(al_points,
                         facecolor = str_fillColor,
-                        edgecolor = str_edgeColor, zorder=3)
+                        edgecolor = str_edgeColor, zorder=Gi_zorder)
     gca().add_patch(poly)
     return poly
 
 try:
-    opts, remargs   = getopt.getopt(sys.argv[1:], 'hxm:s:r:de')
+    opts, remargs   = getopt.getopt(sys.argv[1:], 'hxm:s:r:dez:')
 except getopt.GetoptError:
     sys.exit(1)
 
@@ -83,15 +91,17 @@ for o, a in opts:
         synopsis_show()
         sys.exit(1)
     if (o == '-m'):
-        Gstr_cloudMatrix = a
+        Gstr_cloudMatrix        = a
     if (o == '-s'):
-        G_f_stdWidth    = float(a)
+        G_f_stdWidth            = float(a)
     if (o == '-r'):
-        G_numRotations  = int(a)
+        G_numRotations          = int(a)
+    if (o == '-z'):
+        Gi_zorder               = int(a)
     if (o == '-d'):
-        Gb_debugCloud   = True
+        Gb_debugCloud           = True
     if (o == '-e'):
-        Gb_extentReport = True
+        Gb_extentReport         = True
 
 C_cloud         = C_centroidCloud(file='%s' % Gstr_cloudMatrix, 
                                   stdWidth  = G_f_stdWidth,
