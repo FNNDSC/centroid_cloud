@@ -3,7 +3,7 @@
 from    pylab       import  *
 import  numpy       as      np
 import  sys
-import  systemMisc  as      misc
+from   _common      import systemMisc as misc
 import  math
 
 class C_centroidCloud:
