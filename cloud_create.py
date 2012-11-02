@@ -81,12 +81,15 @@ Gstr_synopsis= """
             If specified, the 'x' dimension is taken to be angle, and scaled
             by 2*pi; and the 'xscale' is not applicable. The 'y' dimension
             is taken to be radius, and scaled by 'yscale'.
-        
+        o 'shape':
+            An internal shape (e.g. a cross) that can be used to test
+            symmetry and asymmetry.
 
 """ % (_numPoints)
 
 _dict_distrib = {
     'None':             lambda p: np.array(p),
+    'shape':            lambda p: np.array(p),
     'scaleX':           lambda p: np.column_stack((p[:,0],p[:,1] * p[:,0])),
     'linearX':          lambda p: np.column_stack((p[:,0],p[:,1] + p[:,0])),
     'linearXscaled':    lambda p: np.column_stack((p[:,0],(p[:,1] + p[:,0]) * p[:,0])),
@@ -131,11 +134,19 @@ def internals_print():
     print   "-S scale       = %f, %f"  % (_f_xscale, _f_yscale)
     print   "-d distribFunc = %s"  % _str_distribFunc
     
-    
+
 _M_cloud    = np.random.random( (_numPoints, 2) )
 _M_cloud   *= np.array( (_f_xscale, _f_yscale) )
 if _str_distribFunc != 'circle':
     _M_cloud   += np.array( (_f_xoffset, _f_yoffset) )
+    if _str_distribFunc == 'shape':
+        _M_left     = _M_cloud.copy() + np.array( (0+_f_xoffset, -1+_f_yoffset) )
+        _M_center   = _M_cloud.copy() + np.array( (1+_f_xoffset,  0+_f_yoffset) )
+        _M_right    = _M_cloud.copy() + np.array( (2+_f_xoffset,  0+_f_yoffset) )
+        _M_top      = _M_cloud.copy() + np.array( (1+_f_xoffset,  1+_f_yoffset) )
+        _M_bottom   = _M_cloud.copy() + np.array( (-1+_f_xoffset, -2+_f_yoffset) )
+        _M_cloud    = np.vstack((_M_left, _M_center, _M_right, _M_top, _M_bottom))
+#        _M_cloud    = np.vstack((_M_left, _M_center, _M_right, _M_top))
 else:
     _M_cloud[:,0] *= 2*math.pi
    
