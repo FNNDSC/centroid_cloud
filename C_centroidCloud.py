@@ -444,7 +444,7 @@ class C_centroidCloud:
         self._d_origCloudStats          = self._dict_stats.copy()
         self._d_rotatedCloudStats       = {}
         self._f_dev                     = 1.0
-        self._b_normalizeCloudSpace     = False
+        self._b_normalizeCloudSpace     = True
 
         self._str_file                  = ''
         self._numRotations              = 90
