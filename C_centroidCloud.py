@@ -356,6 +356,13 @@ class C_centroidCloud:
         for quadrant in range(1,5):
             self._dict_Q[quadrant] = misc.dict_init(self._rotationKeys,
                                         np.zeros( (1,2) ))
+
+    def dimensionality(self):
+        '''
+        Return the dimensionality of the cloud
+        '''
+        return self._M_Cdimensionality
+
     def boundary(self, *args):
         """
         Get/set the boundary points.
