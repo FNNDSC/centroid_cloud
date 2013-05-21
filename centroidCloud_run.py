@@ -15,12 +15,15 @@ Gstr_synopsis = """
         
     SYNOPSIS
     
-        centroidCloud_run.py    -m <cloudFile>   \\
-                                -r <rotations>   \\
-                                -s <stdWidth>    \\
-                                -z <zorder>      \\
-                                -e -d            \\
-                                -x -h            
+        centroidCloud_run.py    -m <cloudFile>       \\
+                                [-r <rotations>      \\
+                                -s <stdWidth>        \\
+                                -z <zorder>          \\
+                                -n                   \\
+                                -a                   \\
+                                -A                   \\
+                                -e -d                \\
+                                -x -h]            
                                 
     DESCRIPTION
     
@@ -48,13 +51,20 @@ Gstr_synopsis = """
         "on top" of the point plots with a default zorder=3. By specifying
         a different zorder (such as '-z 1'), the boundary can be drawn below
         the point plots.
+        
+        -a
+        If specified, will turn ON axis equal flag.
+
+        -A
+        If specified, will turn ON asymmetrical deviations flag.
 
         -n 
         If specified, will turn OFF clould normalization.
 
         Default is to always normalize. Without normalizing, 
         rotational skew can occur. Normalization adds extra operations 
-        (and hence time) to theprojection calculations.
+        (and hence time) to the projection calculations. This extra time
+        is minimal, and normalization should probably be used in all cases.
 
         -a
         If specified, will set axis ranges equal. In cases where deviation is
@@ -75,15 +85,16 @@ Gstr_synopsis = """
         
 """
 
-Gstr_cloudMatrix    = 'cloud.txt'
-Gb_saveFig          = False
-Gb_debugCloud       = False
-Gb_extentReport     = False
-Gb_normalize        = True
-Gb_axisEqual        = False
-Gi_zorder           = 3
-G_numRotations      = 90
-G_f_stdWidth        = 0.5
+Gstr_cloudMatrix            = 'cloud.txt'
+Gb_saveFig                  = False
+Gb_debugCloud               = False
+Gb_extentReport             = False
+Gb_normalize                = True
+Gb_asymmetricalDeviations   = False
+Gb_axisEqual                = False
+Gi_zorder                   = 3
+G_numRotations              = 90
+G_f_stdWidth                = 0.5
 
 def synopsis_show():
     print "USAGE: %s" % Gstr_synopsis
@@ -96,7 +107,7 @@ def deviation_plot(al_points, str_fillColor = 'red', str_edgeColor = 'black'):
     return poly
 
 try:
-    opts, remargs   = getopt.getopt(sys.argv[1:], 'hxm:s:r:dez:na')
+    opts, remargs   = getopt.getopt(sys.argv[1:], 'hxm:s:r:dez:naA')
 except getopt.GetoptError:
     sys.exit(1)
 
@@ -105,26 +116,29 @@ for o, a in opts:
         synopsis_show()
         sys.exit(1)
     if (o == '-m'):
-        Gstr_cloudMatrix        = a
+        Gstr_cloudMatrix            = a
     if (o == '-s'):
-        G_f_stdWidth            = float(a)
+        G_f_stdWidth                = float(a)
     if (o == '-r'):
-        G_numRotations          = int(a)
+        G_numRotations              = int(a)
     if (o == '-z'):
-        Gi_zorder               = int(a)
+        Gi_zorder                   = int(a)
     if (o == '-n'):
-        Gb_normalize            = False
+        Gb_normalize                = False
     if (o == '-a'):
-        Gb_axisEqual            = True
+        Gb_axisEqual                = True
+    if (o == '-A'):
+        Gb_asymmetricalDeviations   = True
     if (o == '-d'):
-        Gb_debugCloud           = True
+        Gb_debugCloud               = True
     if (o == '-e'):
-        Gb_extentReport         = True
+        Gb_extentReport             = True
 
 C_cloud         = C_centroidCloud(file='%s' % Gstr_cloudMatrix, 
                                   stdWidth  = G_f_stdWidth,
                                   rotations = G_numRotations)
 C_cloud.normalize(Gb_normalize)
+C_cloud.asymmetricalDeviations(Gb_asymmetricalDeviations)
 C_cloud.debug(Gb_debugCloud)
 C_cloud.confidenceBoundary_find()
 M_cloud         = C_cloud.cloud()
