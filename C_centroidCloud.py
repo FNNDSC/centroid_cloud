@@ -96,11 +96,24 @@ class C_centroidCloud:
         
         Returns the stats dictionary.
         """
-        adict_stats['mean'] = np.mean(aM, 0)
-        adict_stats['std']  = np.std(aM, 0)
-        adict_stats['min']  = np.min(aM, 0)
-        adict_stats['max']  = np.max(aM, 0)
-        adict_stats['range']= np.max(aM, 0) - np.min(aM,0)
+        adict_stats['mean']     = np.mean(aM, 0)
+        adict_stats['std']      = np.std(aM, 0)
+        adict_stats['stdpos']   = np.std(aM, 0)
+        adict_stats['stdneg']   = np.std(aM, 0)
+        adict_stats['min']      = np.min(aM, 0)
+        adict_stats['max']      = np.max(aM, 0)
+        adict_stats['range']    = np.max(aM, 0) - np.min(aM,0)
+
+        # Calculate the stdpos and stdneg extent
+        dims = len(adict_stats['mean'])
+        for dim in np.arange(0, dims):
+            # pos
+            v_p = np.std(aM[aM[:,dim]>=adict_stats['mean'][dim]],0)
+            adict_stats['stdpos'][dim] = v_p[dim]
+            # neg
+            v_n = np.std(aM[aM[:,dim]<adict_stats['mean'][dim]],0)
+            adict_stats['stdneg'][dim] = v_n[dim]
+
         return adict_stats
                 
     def rot_2D(self, aM, af_theta):
@@ -176,16 +189,25 @@ class C_centroidCloud:
         """
         Determines the 2*nD points of the projections along the coordinate axes,
         in the frame of coordinate axes.
+
+        The asymmetricalDeviations flag controls per-dimensional pos/neg 
+        deviation calculations.
         
         Returns: ((x_min, x_max), (y_min, y_max), ... )
         """
         dims = len(adict_stats['mean'])
         v_ret = np.zeros( (dims), dtype='object')
         for dim in np.arange(0, dims):
-            v_projection = np.array([adict_stats['mean'][dim] - 
-                                     adict_stats['std'][dim] * self._f_dev,
-                                     adict_stats['mean'][dim] + 
-                                     adict_stats['std'][dim] * self._f_dev])
+            if self._b_asymmetricalDeviations:
+                v_projection = np.array([adict_stats['mean'][dim] - 
+                                         adict_stats['stdneg'][dim]*self._f_dev,
+                                         adict_stats['mean'][dim] + 
+                                         adict_stats['stdpos'][dim]*self._f_dev])
+            else:
+                v_projection = np.array([adict_stats['mean'][dim] - 
+                                         adict_stats['std'][dim]*self._f_dev,
+                                         adict_stats['mean'][dim] + 
+                                         adict_stats['std'][dim]*self._f_dev])
             v_ret[dim] = v_projection
         return v_ret
     
@@ -199,7 +221,7 @@ class C_centroidCloud:
             | dim0_max_projection_rotated |    <-- Q1     > 2D
             | dim1_min_projection_rotated |    <-- QIV  /
             | dim1_max_projection_rotated |    <-- QII /
-            |            ...              |          / 
+            |            ...              |           / 
             +-                           -+
         """
         
@@ -405,6 +427,15 @@ class C_centroidCloud:
         else:
             return self._b_normalizeCloudSpace
 
+    def asymmetricalDeviations(self, *args):
+        """
+        Get/set the asymmetricalDeviations flag.
+        """
+        if len(args):
+            self._b_asymmetricalDeviations = args[0]
+        else:
+            return self._b_asymmetricalDeviations
+
     def debug(self, *args):    
         """
         Get/set the debugging flag.
@@ -441,6 +472,8 @@ class C_centroidCloud:
         self._dict_stats                = {
                 'mean':         [],
                 'std':          [],
+                'stdpos':       [],
+                'stdneg':       [],
                 'min':          [],
                 'max':          [],
                 'range':        [],
@@ -451,6 +484,7 @@ class C_centroidCloud:
         self._d_origCloudStats          = self._dict_stats.copy()
         self._d_rotatedCloudStats       = {}
         self._f_dev                     = 1.0
+        self._b_asymmetricalDeviations  = False
         self._b_normalizeCloudSpace     = True
 
         self._str_file                  = ''
