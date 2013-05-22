@@ -55,8 +55,17 @@ Gstr_synopsis = """
         -a
         If specified, will turn ON axis equal flag.
 
-        -A
-        If specified, will turn ON asymmetrical deviations flag.
+        -A <centerMean>
+        If specified, will turn ON asymmetrical deviations flag. The
+        <centerMean> controls the concept of "center" for the asymmetrical
+        deviations. The following options are understood:
+        
+            'original' (default): std is calculated on a subset of original
+                                  observations relative to the original mean
+                                  of the main cloud.
+                                  
+            'subset':             std is calculated relative to the mean
+                                  of the subset.
 
         -n 
         If specified, will turn OFF clould normalization.
@@ -91,6 +100,7 @@ Gb_debugCloud               = False
 Gb_extentReport             = False
 Gb_normalize                = True
 Gb_asymmetricalDeviations   = False
+Gstr_centerMean             = 'original'
 Gb_axisEqual                = False
 Gi_zorder                   = 3
 G_numRotations              = 90
@@ -107,7 +117,7 @@ def deviation_plot(al_points, str_fillColor = 'red', str_edgeColor = 'black'):
     return poly
 
 try:
-    opts, remargs   = getopt.getopt(sys.argv[1:], 'hxm:s:r:dez:naA')
+    opts, remargs   = getopt.getopt(sys.argv[1:], 'hxm:s:r:dez:naA:')
 except getopt.GetoptError:
     sys.exit(1)
 
@@ -129,6 +139,9 @@ for o, a in opts:
         Gb_axisEqual                = True
     if (o == '-A'):
         Gb_asymmetricalDeviations   = True
+        Gstr_centerMean             = a
+        if(Gstr_centerMean != 'original' and Gstr_centerMean != 'subset'):
+            Gstr_centerMean = 'original'
     if (o == '-d'):
         Gb_debugCloud               = True
     if (o == '-e'):
@@ -139,7 +152,7 @@ C_cloud         = C_centroidCloud(file='%s' % Gstr_cloudMatrix,
                                   rotations = G_numRotations)
 C_cloud.normalize(Gb_normalize)
 C_cloud.asymmetricalDeviations(Gb_asymmetricalDeviations)
-C_cloud.debug(Gb_debugCloud)
+C_cloud.centerMean(Gstr_centerMean)
 C_cloud.confidenceBoundary_find()
 M_cloud         = C_cloud.cloud()
 l_polygonPoints = C_cloud.boundary()
