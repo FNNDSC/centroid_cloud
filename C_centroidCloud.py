@@ -82,6 +82,19 @@ class C_centroidCloud:
         if len( astr_extraMsg ): print(astr_extraMsg)
         self.error_exit( astr_key, b_exitToOS )
 
+    def std2mean(self, aM, av_mean):
+        """
+        Calculates deviation of <aM> about to <av_mean>, which might
+        be different than the actual mean of <aM>.
+        """
+        dims    = len(av_mean)
+        v_dev   = np.copy(av_mean)
+        N       = aM.shape[0]
+        for dim in np.arange(0, dims):
+            f_dev       = sqrt(np.sum(1.0/float(N) * (aM[:,dim] - av_mean[dim])**2))
+            v_dev[dim]  = f_dev
+        return v_dev
+
     def stats_calc(self, aM, adict_stats):
         """
         Assumes that the cloud <aM> is in row order, i.e.
@@ -108,10 +121,18 @@ class C_centroidCloud:
         dims = len(adict_stats['mean'])
         for dim in np.arange(0, dims):
             # pos
-            v_p = np.std(aM[aM[:,dim]>=adict_stats['mean'][dim]],0)
+            if(self._str_centerMean == 'subset'):
+                v_p = np.std(aM[aM[:,dim]>=adict_stats['mean'][dim]],0)
+            if(self._str_centerMean == 'original'):
+                v_p = self.std2mean(aM[aM[:,dim]>=adict_stats['mean'][dim]], 
+                          adict_stats['mean'])
             adict_stats['stdpos'][dim] = v_p[dim]
             # neg
-            v_n = np.std(aM[aM[:,dim]<adict_stats['mean'][dim]],0)
+            if(self._str_centerMean == 'subset'):
+                v_n = np.std(aM[aM[:,dim]<adict_stats['mean'][dim]],0)
+            if(self._str_centerMean == 'original'):
+                v_n = self.std2mean(aM[aM[:,dim]<adict_stats['mean'][dim]], 
+                          adict_stats['mean'])
             adict_stats['stdneg'][dim] = v_n[dim]
 
         return adict_stats
@@ -435,6 +456,15 @@ class C_centroidCloud:
             self._b_asymmetricalDeviations = args[0]
         else:
             return self._b_asymmetricalDeviations
+        
+    def centerMean(self, *args):
+        """
+        Get/set the centerMean value.
+        """
+        if len(args):
+            self._str_centerMean = args[0]
+        else:
+            return self._str_centerMean
 
     def debug(self, *args):    
         """
@@ -485,6 +515,7 @@ class C_centroidCloud:
         self._d_rotatedCloudStats       = {}
         self._f_dev                     = 1.0
         self._b_asymmetricalDeviations  = False
+        self._str_centerMean            = 'original'
         self._b_normalizeCloudSpace     = True
 
         self._str_file                  = ''
