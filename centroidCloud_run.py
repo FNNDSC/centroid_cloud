@@ -53,7 +53,9 @@ Gstr_synopsis = """
         the point plots.
         
         -a
-        If specified, will turn ON axis equal flag.
+        If specified, will set axis ranges equal. In cases where deviation is
+        much more along one axis than another, this will result in a very
+        "thin" boundary polygon.
 
         -A <centerMean>
         If specified, will turn ON asymmetrical deviations flag. The
@@ -74,11 +76,6 @@ Gstr_synopsis = """
         rotational skew can occur. Normalization adds extra operations 
         (and hence time) to the projection calculations. This extra time
         is minimal, and normalization should probably be used in all cases.
-
-        -a
-        If specified, will set axis ranges equal. In cases where deviation is
-        much more along one axis than another, this will result in a very
-        "thin" boundary polygon.
         
         -e
         If specified, print an extent report that gives for each rotation
