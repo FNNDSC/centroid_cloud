@@ -116,7 +116,7 @@ class C_centroidCloud:
         adict_stats['min']      = np.min(aM, 0)
         adict_stats['max']      = np.max(aM, 0)
         adict_stats['range']    = np.max(aM, 0) - np.min(aM,0)
-
+        
         # Calculate the stdpos and stdneg extent
         dims = len(adict_stats['mean'])
         for dim in np.arange(0, dims):
@@ -126,6 +126,7 @@ class C_centroidCloud:
             if(self._str_centerMean == 'original'):
                 v_p = self.std2mean(aM[aM[:,dim]>=adict_stats['mean'][dim]], 
                           adict_stats['mean'])
+	    print v_p
             adict_stats['stdpos'][dim] = v_p[dim]
             # neg
             if(self._str_centerMean == 'subset'):
