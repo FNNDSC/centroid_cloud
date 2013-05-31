@@ -126,7 +126,6 @@ class C_centroidCloud:
             if(self._str_centerMean == 'original'):
                 v_p = self.std2mean(aM[aM[:,dim]>=adict_stats['mean'][dim]], 
                           adict_stats['mean'])
-	    print v_p
             adict_stats['stdpos'][dim] = v_p[dim]
             # neg
             if(self._str_centerMean == 'subset'):
