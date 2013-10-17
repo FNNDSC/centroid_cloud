@@ -123,7 +123,7 @@ class C_centroidCloud:
             # pos
             if(self._str_centerMean == 'subset'):
                 v_p = np.std(aM[aM[:,dim]>=adict_stats['mean'][dim]],0)
-            if(self._str_centerMean == 'original'):
+            if(self._str_centerMean == 'original' or not len(self._str_centerMean)):
                 v_p = self.std2mean(aM[aM[:,dim]>=adict_stats['mean'][dim]], 
                           adict_stats['mean'])
             adict_stats['stdpos'][dim] = v_p[dim]
