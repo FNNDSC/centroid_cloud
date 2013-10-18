@@ -110,6 +110,9 @@ class C_centroidCloud:
         Returns the stats dictionary.
         """
         adict_stats['mean']     = np.mean(aM, 0)
+        adict_stats['median']   = np.median(aM, 0)
+        adict_stats['ptile1']   = np.percentile(aM, 50-self._f_percentile, 0)
+        adict_stats['ptile2']   = np.percentile(aM, 50+self._f_percentile, 0)
         adict_stats['std']      = np.std(aM, 0)
         adict_stats['stdpos']   = np.std(aM, 0)
         adict_stats['stdneg']   = np.std(aM, 0)
@@ -219,7 +222,7 @@ class C_centroidCloud:
         dims = len(adict_stats['mean'])
         v_ret = np.zeros( (dims), dtype='object')
         for dim in np.arange(0, dims):
-            if self._b_asymmetricalDeviations:
+            if self._b_asymmetricalDeviations and not self._b_usePercentiles:
                 v_projection = np.array([adict_stats['mean'][dim] - 
                                          adict_stats['stdneg'][dim]*self._f_dev,
                                          adict_stats['mean'][dim] + 
@@ -229,6 +232,9 @@ class C_centroidCloud:
                                          adict_stats['std'][dim]*self._f_dev,
                                          adict_stats['mean'][dim] + 
                                          adict_stats['std'][dim]*self._f_dev])
+            if self._b_usePercentiles:
+                v_projection = np.array([adict_stats['ptile1'][dim],
+                                         adict_stats['ptile2'][dim]])
             v_ret[dim] = v_projection
         return v_ret
     
@@ -456,6 +462,25 @@ class C_centroidCloud:
             self._b_asymmetricalDeviations = args[0]
         else:
             return self._b_asymmetricalDeviations
+
+    def usePercentiles(self, *args):
+        """
+        Get/set the usePercentiles flag.
+        """
+        if len(args):
+            self._b_usePercentiles = args[0]
+        else:
+            return self._b_usePercentiles
+
+    def percentile(self, *args):
+        """
+        Get/set the percentile value.
+        """
+        if len(args):
+            self._f_percentile = args[0]
+        else:
+            return self._f_percentile
+
         
     def centerMean(self, *args):
         """
@@ -501,6 +526,7 @@ class C_centroidCloud:
         
         self._dict_stats                = {
                 'mean':         [],
+                'median':       [],
                 'std':          [],
                 'stdpos':       [],
                 'stdneg':       [],
@@ -514,9 +540,13 @@ class C_centroidCloud:
         self._d_origCloudStats          = self._dict_stats.copy()
         self._d_rotatedCloudStats       = {}
         self._f_dev                     = 1.0
-        self._b_asymmetricalDeviations  = False
         self._str_centerMean            = 'original'
         self._b_normalizeCloudSpace     = True
+
+        self._b_asymmetricalDeviations  = False
+        self._b_usePercentiles          = False
+        self._f_percentile              = 25
+
 
         self._str_file                  = ''
         self._numRotations              = 90
