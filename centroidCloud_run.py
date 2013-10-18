@@ -97,6 +97,8 @@ Gb_debugCloud               = False
 Gb_extentReport             = False
 Gb_normalize                = True
 Gb_asymmetricalDeviations   = False
+Gb_usePercentiles           = False
+G_f_percentile              = 25
 Gstr_centerMean             = 'original'
 Gb_axisEqual                = False
 Gi_zorder                   = 3
@@ -114,7 +116,7 @@ def deviation_plot(al_points, str_fillColor = 'red', str_edgeColor = 'black'):
     return poly
 
 try:
-    opts, remargs   = getopt.getopt(sys.argv[1:], 'hxm:s:r:dez:naA:')
+    opts, remargs   = getopt.getopt(sys.argv[1:], 'hxm:s:r:dez:naA:p:')
 except getopt.GetoptError:
     sys.exit(1)
 
@@ -134,6 +136,9 @@ for o, a in opts:
         Gb_normalize                = False
     if (o == '-a'):
         Gb_axisEqual                = True
+    if (o == '-p'):
+        Gb_usePercentiles           = True
+        G_f_percentile              = float(a)
     if (o == '-A'):
         Gb_asymmetricalDeviations   = True
         Gstr_centerMean             = a
@@ -148,6 +153,8 @@ C_cloud         = C_centroidCloud(file='%s' % Gstr_cloudMatrix,
                                   stdWidth  = G_f_stdWidth,
                                   rotations = G_numRotations)
 C_cloud.normalize(Gb_normalize)
+C_cloud.usePercentiles(Gb_usePercentiles)
+C_cloud.percentile(G_f_percentile)
 C_cloud.asymmetricalDeviations(Gb_asymmetricalDeviations)
 C_cloud.centerMean(Gstr_centerMean)
 C_cloud.confidenceBoundary_find()
