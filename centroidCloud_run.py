@@ -15,14 +15,14 @@ Gstr_synopsis = """
         
     SYNOPSIS
     
-        centroidCloud_run.py    -m <cloudFile>       \\
-                                [-r <rotations>      \\
-                                -s <stdWidth>        \\
-                                -z <zorder>          \\
-                                -n                   \\
-                                -a                   \\
-                                -A                   \\
-                                -e -d                \\
+        centroidCloud_run.py    -m <cloudFile>                          \\
+                                [-r <rotations>                         \\
+                                -s <stdWidth>                           \\
+                                -z <zorder>                             \\
+                                -n                                      \\
+                                -a                                      \\
+                                [ -A <centerMean> | -p <percentile>]    \\
+                                -e -d                                   \\
                                 -x -h]            
                                 
     DESCRIPTION
@@ -68,6 +68,11 @@ Gstr_synopsis = """
                                   
             'subset':             std is calculated relative to the mean
                                   of the subset.
+                                  
+        -p <percentile>
+        If specified, trigger a descriptive statistical analysis, using the
+        passed <percentile> as upper and lower deviation from the center 
+        mean.    
 
         -n 
         If specified, will turn OFF clould normalization.
