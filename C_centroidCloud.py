@@ -110,7 +110,9 @@ class C_centroidCloud:
         Returns the stats dictionary.
         """
         adict_stats['mean']     = np.mean(aM, 0)
+        #print(adict_stats['mean'])
         adict_stats['median']   = np.median(aM, 0)
+        #print(adict_stats['median'])
         adict_stats['ptile1']   = np.percentile(aM, 50-self._f_percentile, 0)
         adict_stats['ptile2']   = np.percentile(aM, 50+self._f_percentile, 0)
         adict_stats['std']      = np.std(aM, 0)
@@ -139,11 +141,18 @@ class C_centroidCloud:
             adict_stats['stdneg'][dim] = v_n[dim]
 
         return adict_stats
-                
-    def rot_2D(self, aM, af_theta):
+    
+    @staticmethod            
+    def rot_2D(aM, af_theta, **kwargs):
         """
         Return the 2D rotation of a cloud of 2D points, aM, 
-        about angle af_theta (rad):
+        about angle af_theta (rad), using an optional center:
+        point (passed in **kwargs).
+        
+        If a center point is passed, all points in the aM cloud
+        are first expressed relative to the center, 
+        
+                                aM = aM - p_center
         
         aM is assumed to be of form:
 
@@ -174,12 +183,22 @@ class C_centroidCloud:
            
         
         """
+        b_center = False
+        p_center = np.array( (0.0, 0.0) )
+        for key, value in kwargs.iteritems():
+            if key == 'center':
+                p_center = value
+                b_center = True
+
+        if b_center: aM = aM - p_center
         M_rot       = np.zeros( (2,2) )
         M_rot[0,0]  = math.cos(af_theta);   M_rot[0,1] = -math.sin(af_theta)
         M_rot[1,0]  = math.sin(af_theta);   M_rot[1,1] =  math.cos(af_theta)
         M_Ctr       = aM.transpose()
         M_Crot      = np.dot(M_rot, M_Ctr)
-        return M_Crot.transpose()
+        M_Cret      = M_Crot.transpose()
+        if b_center: M_Cret      = M_Cret + p_center
+        return M_Cret
 
     def cloudSpace_normalize(self, aM_cloud, o_adict_stats):
         '''
@@ -267,7 +286,7 @@ class C_centroidCloud:
         M_centerMask    = M_center * M_mask
         M_p             = M_p + M_centerMask
         # Now rotate the end points by <af_theta>
-        M_p_rot = self.rot_2D(M_p, af_theta)
+        M_p_rot = C_centroidCloud.rot_2D(M_p, af_theta, center=self._np_cloudCenter)
         return M_p_rot
 
     def projectionExtent_find(self, av_projections):
@@ -327,14 +346,22 @@ class C_centroidCloud:
         NOTE:
         * Only properly debugged for planar (i.e. 2D) boundaries.
         """
+        
+        # Preserve the statistcs of the original cloud space
         self.stats_calc(self._M_C, self._d_origCloudStats)
+        # Normalize (default behaviour) to reduce rotational skew
         if self._b_normalizeCloudSpace:
             self._M_C = self.cloudSpace_normalize(self._M_C, self._d_origCloudStats)
+            self.stats_calc(self._M_C, self._d_normCloudStats)
+            self._np_cloudCenter = self._d_normCloudStats['mean']
+        else:
+            self._np_cloudCenter = self._d_origCloudStats['mean']
+            
         for rotation in self._rotationKeys:
             f_angle = self._dict_rotationVal[rotation]
             f_rad   = np.deg2rad(f_angle)
             # First, rotation the cloud by -r_rad:
-            neg_C   = self.rot_2D(self._M_C, -f_rad)
+            neg_C   = C_centroidCloud.rot_2D(self._M_C, -f_rad, center=self._np_cloudCenter)
             # Now find the projections on the standard x/y axis:
             self.stats_calc(neg_C, self._d_rotatedCloudStats[rotation])
             self._d_rotatedCloudStats[rotation]['rotation'] = rotation
@@ -535,9 +562,13 @@ class C_centroidCloud:
                 'range':        [],
                 'rotation':     0.0
         }
+        
+        self._np_cloudCenter            = None
+        
         self._l_min                     = []
         self._l_max                     = []
         self._d_origCloudStats          = self._dict_stats.copy()
+        self._d_normCloudStats          = self._dict_stats.copy()
         self._d_rotatedCloudStats       = {}
         self._f_dev                     = 1.0
         self._str_centerMean            = 'original'
