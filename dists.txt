@@ -1,8 +1,11 @@
-cloud_create.py -n 100000 -s box.txt 
-cloud_create.py -n 100000 -s linearX.txt -d linearX
-cloud_create.py -n 100000 -s linearX.txt -d linearX
-cloud_create.py -n 100000 -s quadX.txt -d quadX
-cloud_create.py -n 100000 -s linearXscaled.txt -d linearXscaled
-cloud_create.py -n 100000 -s quadXscaled.txt -d quadXscaled
-cloud_create.py -n 100000 -s circle.txt -d circle
-cloud_create.py -n 100000 -s triangle.txt -d scaleX
+cloud_create.py -n 100000 -s box.txt 		-d None
+cloud_create.py -n 100000 -s southafrica.txt 	-d southafrica
+cloud_create.py -n 100000 -s stpatrick.txt 	-d stpatrick
+cloud_create.py -n 100000 -s stgeorge.txt 	-d stgeorge
+cloud_create.py -n 100000 -s scaleX.txt 	-d scaleX
+cloud_create.py -n 100000 -s linearX.txt 	-d linearX
+cloud_create.py -n 100000 -s linearXbi.txt 	-d linearXbi
+cloud_create.py -n 100000 -s linearXscaled.txt 	-d linearXscaled
+cloud_create.py -n 100000 -s quadX.txt 		-d quadX
+cloud_create.py -n 100000 -s quadXscaled.txt	-d quadXscaled
+cloud_create.py -n 100000 -s circle.txt 	-d circle
