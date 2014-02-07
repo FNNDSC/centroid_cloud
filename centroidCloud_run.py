@@ -15,7 +15,7 @@ Gstr_synopsis = """
         
     SYNOPSIS
     
-        centroidCloud_run.py    -m <cloudFile>                          \\
+        centroidCloud_run.py    -m <cloudFileLst>                       \\
                                 [-r <rotations>                         \\
                                 -s <stdWidth>                           \\
                                 -z <zorder>                             \\
@@ -37,8 +37,9 @@ Gstr_synopsis = """
         
     ARGUMENTS
     
-        -m <cloudFile>
-        The cloud file to read.
+        -m <cloudFileLst>
+        A comma separated list of cloud files to read. Each cloud file will 
+        be plotted and its centroid cloud determined.
 
         -r <rotations>
         The number of rotations, evenly spread out between 0...90 degrees.
@@ -96,7 +97,7 @@ Gstr_synopsis = """
         
 """
 
-Gstr_cloudMatrix            = 'cloud.txt'
+Gstr_cloudMatrixLst         = 'cloud.txt'
 Gb_saveFig                  = False
 Gb_debugCloud               = False
 Gb_extentReport             = False
@@ -130,7 +131,7 @@ for o, a in opts:
         synopsis_show()
         sys.exit(1)
     if (o == '-m'):
-        Gstr_cloudMatrix            = a
+        Gstr_cloudMatrixLst         = a
     if (o == '-s'):
         G_f_stdWidth                = float(a)
     if (o == '-r'):
@@ -154,27 +155,43 @@ for o, a in opts:
     if (o == '-e'):
         Gb_extentReport             = True
 
-C_cloud         = C_centroidCloud(file='%s' % Gstr_cloudMatrix, 
-                                  stdWidth  = G_f_stdWidth,
-                                  rotations = G_numRotations)
-C_cloud.normalize(Gb_normalize)
-C_cloud.usePercentiles(Gb_usePercentiles)
-C_cloud.percentile(G_f_percentile)
-C_cloud.asymmetricalDeviations(Gb_asymmetricalDeviations)
-C_cloud.centerMean(Gstr_centerMean)
-C_cloud.confidenceBoundary_find()
-M_cloud         = C_cloud.cloud()
-l_polygonPoints = C_cloud.boundary()
+l_cloudFile         = Gstr_cloudMatrixLst.split(',')
+lC_cloud            = []
+lM_cloud            = []
+ll_polygonPoints    = []
+p                   = []
+poly                = []
 
 figure()
 if Gb_axisEqual:
     axis('equal')
 grid() 
 
-p1,     = plot(M_cloud[:,0], M_cloud[:,1], color='#FF0000', marker='*', ls='None',
-               zorder = 1)
-poly    = deviation_plot(l_polygonPoints, 'blue') 
- 
-if Gb_extentReport: print C_cloud.projectionExtent_report()
+for cloud in range(0, len(l_cloudFile)):
+    print("Processing %s" % l_cloudFile[cloud])
+    lC_cloud.append(
+                  C_centroidCloud(file      ='%s' % l_cloudFile[cloud], 
+                                  stdWidth  = G_f_stdWidth,
+                                  rotations = G_numRotations)        
+                  )
+    print("Normalizing...")
+    lC_cloud[cloud].normalize(Gb_normalize)
+    lC_cloud[cloud].usePercentiles(Gb_usePercentiles)
+    lC_cloud[cloud].percentile(G_f_percentile)
+    lC_cloud[cloud].asymmetricalDeviations(Gb_asymmetricalDeviations)
+    lC_cloud[cloud].centerMean(Gstr_centerMean)
+    print("Finding confidence boundary...")
+    lC_cloud[cloud].confidenceBoundary_find()
+    print("Appending cloud matrix...")
+    lM_cloud.append(lC_cloud[cloud].cloud())
+    print("Appending polygonPoints...")
+    ll_polygonPoints.append(lC_cloud[cloud].boundary())
+    print("Plotting...")
+    p.append(plot(lM_cloud[cloud][:,0], lM_cloud[cloud][:,1], 
+                    color='#FF0000', marker='*', ls='None',
+                    zorder = 1))
+    poly.append(deviation_plot(ll_polygonPoints[cloud], 'blue')) 
+    if Gb_extentReport: print C_cloud[cloud].projectionExtent_report()
+
 show()
 
