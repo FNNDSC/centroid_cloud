@@ -173,7 +173,7 @@ grid()
 
 p1,     = plot(M_cloud[:,0], M_cloud[:,1], color='#FF0000', marker='*', ls='None',
                zorder = 1)
-poly    = deviation_plot(l_polygonPoints, 'green') 
+poly    = deviation_plot(l_polygonPoints, 'blue') 
  
 if Gb_extentReport: print C_cloud.projectionExtent_report()
 show()
