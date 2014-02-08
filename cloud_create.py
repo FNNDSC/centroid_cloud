@@ -101,10 +101,8 @@ _dict_distrib = {
     'stgeorge':         lambda p: np.array(p),
     'scaleX':           lambda p: np.column_stack((p[:,0],p[:,1] * p[:,0])),
     'linearX':          lambda p: np.column_stack((p[:,0],p[:,1] + p[:,0])),
-    'linearXbi':        lambda p: np.vstack((np.column_stack((  p[:,0], 0.5*p[:,0] + p[:,1])),
-                                             np.column_stack((2*p[:,0], 1.5*p[:,0] + p[:,1])),
-                                             np.column_stack((2*p[:,0],-2*p[:,0] - 0.5*p[:,1])),
-                                             np.column_stack((  p[:,0],   p[:,0] - 0.5*p[:,1])))),
+    'linearXbi':        lambda p: np.vstack((np.column_stack((  p[:,0], 2.0/3.0*p[:,0] + p[:,1])),
+                                             np.column_stack((  p[:,0],-2.0/3.0*p[:,0] - p[:,1])))),
     'linearXscaled':    lambda p: np.column_stack((p[:,0],(p[:,1] + p[:,0]) * p[:,0])),
     'quadX':            lambda p: np.column_stack((p[:,0],p[:,1] + p[:,0]**2)), 
     'quadXscaled':      lambda p: np.column_stack((p[:,0],(p[:,1] + p[:,0]**2) * p[:,0])),
@@ -153,18 +151,29 @@ _M_cloud   *= np.array( (_f_xscale, _f_yscale) )
 if _str_distribFunc != 'circle':
     _M_cloud   += np.array( (_f_xoffset, _f_yoffset) )
     if _str_distribFunc == 'southafrica':
-        _M_leftLegs     = _dict_distrib['linearXbi'](_M_cloud)
-        _M_leftLegs    *= np.array( (-1, 1) ); # Flip the legs to the left
-        _M_right1       = _M_cloud.copy() * np.array((1, 2)) + np.array( (0+_f_xoffset, -1.0+_f_yoffset) )
-        _M_right2       = _M_cloud.copy() * np.array((1, 2)) + np.array( (1+_f_xoffset, -1.0+_f_yoffset) )
-        _M_cloud        = np.vstack((_M_leftLegs, _M_right1, _M_right2))
+        _M_cloud       -= np.array ( (_f_xoffset, 0.5+_f_yoffset) )
+        _M_leftLegs1    = _dict_distrib['linearXbi'](_M_cloud)
+        _M_leftLegs2    = _dict_distrib['linearXbi'](_M_cloud+np.array((1,0)))
+        _M_leftLegs1   *= np.array( (-1, 1) ); 
+        _M_leftLegs2   *= np.array( (-1, 1) ); 
+        _M_right1       = _M_cloud.copy() + np.array( ( 0.0+_f_xoffset,  0.0+_f_yoffset) )
+        _M_right2       = _M_cloud.copy() + np.array( ( 1.0+_f_xoffset,  0.0+_f_yoffset) )
+        _M_cloud        = np.vstack((_M_leftLegs1,  _M_leftLegs2, 
+                                     _M_right1, _M_right2))
     elif _str_distribFunc == 'stpatrick':
-        _M_cloud       -= np.array ( (-0.5+_f_xoffset, -0.5+_f_yoffset) )
+        _M_cloud       -= np.array ( (_f_xoffset, 0.5+_f_yoffset) )
         # Each "sub-part" shape is created and the recombined
-        _M_rightLegs    = _dict_distrib['linearXbi'](_M_cloud)
-        _M_leftLegs     = _dict_distrib['linearXbi'](_M_cloud)
-        _M_leftLegs    *= np.array( (-1, 1) ); 
-        _M_cloud        = np.vstack((_M_rightLegs, _M_leftLegs))
+        _M_rightLegs1   = _dict_distrib['linearXbi'](_M_cloud)
+        _M_rightLegs2   = _dict_distrib['linearXbi'](_M_cloud+np.array((1,0)))
+        _M_rightLegs3   = _dict_distrib['linearXbi'](_M_cloud+np.array((2,0)))
+        _M_leftLegs1    = _dict_distrib['linearXbi'](_M_cloud)
+        _M_leftLegs2    = _dict_distrib['linearXbi'](_M_cloud+np.array((1,0)))
+        _M_leftLegs3    = _dict_distrib['linearXbi'](_M_cloud+np.array((2,0)))
+        _M_leftLegs1   *= np.array( (-1, 1) ); 
+        _M_leftLegs2   *= np.array( (-1, 1) ); 
+        _M_leftLegs3   *= np.array( (-1, 1) ); 
+        _M_cloud        = np.vstack((_M_rightLegs1, _M_rightLegs2, _M_rightLegs3,
+                                     _M_leftLegs1, _M_leftLegs2, _M_leftLegs3))
     elif _str_distribFunc == 'stgeorge':
         _M_center   = _M_cloud.copy() + np.array( (-0.5+_f_xoffset,  -0.5+_f_yoffset) )
         _M_left1    = _M_cloud.copy() + np.array( (-1.5+_f_xoffset,  -0.5+_f_yoffset) )
