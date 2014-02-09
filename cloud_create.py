@@ -1,7 +1,8 @@
 #!/usr/bin/env python2.7
 
 import  random
-import  numpy   as np
+import  numpy           as np
+import  matplotlib.mlab as mlab
 import  getopt
 import  sys
 import  math
@@ -13,6 +14,10 @@ _f_xscale           = 1.0
 _f_yscale           = 1.0
 _str_distribFunc    = 'None'
 _str_outFile        = 'cloud.txt'
+
+_b_gaussian         = False
+_f_mean             = 0.0
+_f_sigma            = 1.0
 
 Gstr_synopsis= """
 
@@ -26,6 +31,7 @@ Gstr_synopsis= """
                            [-n <points>]             \\
                            [-O <xoffset,yoffset>]    \\
                            [-S <xscale,yscale>]      \\
+                           [-G <mean,sigma>]         \\
                            [-d <distribFunc>]        
                            
     DESCRIPTION
@@ -54,6 +60,10 @@ Gstr_synopsis= """
         
         -S <xscale,yscale>
         The extent of the cloud. Defaults to (1, 1);
+
+        -G <mean,sigma>
+        If specified, apply a radial Gaussian filter with passed <mean>
+        and <sigma>.
         
         -d <distribFunc>
         The function to control the shape of the cloud. Default is 'None', 
@@ -114,7 +124,7 @@ def synopsis_show():
     print "USAGE: %s" % Gstr_synopsis
 
 try:
-    opts, remargs   = getopt.getopt(sys.argv[1:], 'n:s:O:S:d:xh')
+    opts, remargs   = getopt.getopt(sys.argv[1:], 'n:s:O:S:d:G:xh')
 except getopt.GetoptError:
     sys.exit(1)
 
@@ -136,6 +146,11 @@ for o, a in opts:
         _l_XYscale          = _str_XYscale.split(',')
         _f_xscale           = float(_l_XYscale[0])
         _f_yscale           = float(_l_XYscale[1])
+    if (o == '-G'):
+        _b_gaussian         = True
+        _l_meanSigma        = a.split(',')
+        _f_mean             = float(_l_meanSigma[0])
+        _f_sigma            = float(_l_meanSigma[1])
     if (o == '-d'):
         _str_distribFunc    = a
 
@@ -145,7 +160,7 @@ def internals_print():
     print   "-S scale       = %f, %f"  % (_f_xscale, _f_yscale)
     print   "-d distribFunc = %s"  % _str_distribFunc
     
-
+_M0         = np.array((_f_xoffset, _f_yoffset))
 _M_cloud    = np.random.random( (_numPoints, 2) )
 _M_cloud   *= np.array( (_f_xscale, _f_yscale) )
 if _str_distribFunc != 'circle':
@@ -195,7 +210,27 @@ else:
 _M_cloud    = _dict_distrib[_str_distribFunc](_M_cloud)   
 if _str_distribFunc == 'circle':
     _M_cloud   += np.array( (_f_xoffset, _f_yoffset) )
-    
+
+if _b_gaussian:
+    # Loop over all points and apply a Gaussian filter
+    print("Applying Gaussian filter...")
+    _f_norm  = 1/mlab.normpdf(0, _f_mean, _f_sigma)
+    _inc     = 0
+    print("Initial cloud size = %d" % len(_M_cloud))
+    print("Filtering with mean = %f, sigma = %f" % (_f_mean, _f_sigma))
+    for p in np.arange(0,len(_M_cloud)):
+        vP          = _M_cloud[p]
+        _f_distance = np.linalg.norm(vP - _M0)
+        _f_prob     = _f_norm * mlab.normpdf(_f_distance, _f_mean, _f_sigma)
+        if np.random.random() < _f_prob:
+            if not _inc:
+                _M_cloudP   = vP
+                _inc       += 1
+            else: 
+                _M_cloudP   = np.vstack((_M_cloudP, vP))
+    print("Filtered cloud size = %d" % len(_M_cloudP))
+    _M_cloud    = _M_cloudP 
+
 np.savetxt(_str_outFile, _M_cloud, fmt='%10.5f', delimiter='\t', newline='\n')
 
         
