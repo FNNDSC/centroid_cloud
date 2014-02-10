@@ -1,7 +1,9 @@
 #!/usr/bin/env python2.7
 
-from    pylab   import *
-import  numpy   as np
+from    pylab                   import *
+import  itertools
+import  scipy.stats             as stats
+import  numpy                   as np
 import  getopt
 import  sys
 
@@ -22,6 +24,7 @@ Gstr_synopsis = """
                                 -n                                      \\
                                 -a                                      \\
                                 [ -A <centerMean> | -p <percentile>]    \\
+                                -C <cloudColorLst> -K <kernelColorLst>  \\
                                 -e -d                                   \\
                                 -x -h]            
                                 
@@ -110,6 +113,8 @@ Gb_axisEqual                = False
 Gi_zorder                   = 3
 G_numRotations              = 90
 G_f_stdWidth                = 0.5
+Gstr_cloudColorLst          = 'red,green,yellow'
+Gstr_kernelColorLst         = 'blue,cyan,magenta'
 
 def synopsis_show():
     print "USAGE: %s" % Gstr_synopsis
@@ -122,7 +127,7 @@ def deviation_plot(al_points, str_fillColor = 'red', str_edgeColor = 'black'):
     return poly
 
 try:
-    opts, remargs   = getopt.getopt(sys.argv[1:], 'hxm:s:r:dez:naA:p:')
+    opts, remargs   = getopt.getopt(sys.argv[1:], 'hxm:s:r:dez:naA:p:C:K:')
 except getopt.GetoptError:
     sys.exit(1)
 
@@ -132,6 +137,10 @@ for o, a in opts:
         sys.exit(1)
     if (o == '-m'):
         Gstr_cloudMatrixLst         = a
+    if (o == '-C'):
+        Gstr_cloudColorLst          = a
+    if (o == '-K'):
+        Gstr_kernelColorLst         = a
     if (o == '-s'):
         G_f_stdWidth                = float(a)
     if (o == '-r'):
@@ -156,6 +165,8 @@ for o, a in opts:
         Gb_extentReport             = True
 
 l_cloudFile         = Gstr_cloudMatrixLst.split(',')
+l_cloudColor        = Gstr_cloudColorLst.split(',')
+l_kernelColor       = Gstr_kernelColorLst.split(',')
 lC_cloud            = []
 lM_cloud            = []
 ll_polygonPoints    = []
@@ -188,10 +199,23 @@ for cloud in range(0, len(l_cloudFile)):
     ll_polygonPoints.append(lC_cloud[cloud].boundary())
     print("Plotting...")
     p.append(plot(lM_cloud[cloud][:,0], lM_cloud[cloud][:,1], 
-                    color='#FF0000', marker='*', ls='None',
+                    color=l_cloudColor[cloud], marker='*', ls='None',
                     zorder = 1))
-    poly.append(deviation_plot(ll_polygonPoints[cloud], 'blue')) 
+    poly.append(deviation_plot(ll_polygonPoints[cloud], l_kernelColor[cloud])) 
     if Gb_extentReport: print C_cloud[cloud].projectionExtent_report()
+
+
+if len(l_cloudFile) > 1:
+    l_combinations = list(itertools.combinations(range(len(l_cloudFile)), 2))
+    print(l_combinations)
+    for combination in l_combinations:
+        g1  = combination[0]
+        g2  = combination[1]
+        print("group 1 = %d" % g1)
+        print("group 2 = %d" % g2)
+        v_tstat, v_pval = stats.ttest_ind(lM_cloud[g1], lM_cloud[g2], equal_var = False)
+        f_pval  = np.linalg.norm(v_pval)
+        print("p-val for comparison between group %d and %d is %f" % (g1, g2, f_pval))
 
 show()
 
