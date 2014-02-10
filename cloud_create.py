@@ -190,20 +190,25 @@ if _str_distribFunc != 'circle':
         _M_cloud        = np.vstack((_M_rightLegs1, _M_rightLegs2, _M_rightLegs3,
                                      _M_leftLegs1, _M_leftLegs2, _M_leftLegs3))
     elif _str_distribFunc == 'stgeorge':
+        _M_Cbool    = _M_cloud > np.array((0.5+_f_xoffset, 0+_f_yoffset))
+        _Mi         = _M_Cbool.prod(axis=1)
+        _M_half     = _M_cloud[np.where(_Mi == 1)]
         _M_center   = _M_cloud.copy() + np.array( (-0.5+_f_xoffset,  -0.5+_f_yoffset) )
         _M_left1    = _M_cloud.copy() + np.array( (-1.5+_f_xoffset,  -0.5+_f_yoffset) )
         _M_left2    = _M_cloud.copy() + np.array( (-2.5+_f_xoffset,  -0.5+_f_yoffset) )
+        _M_left25   = _M_half.copy()  + np.array( (-3.5+_f_xoffset,  -0.5+_f_yoffset) )
         _M_upper1   = _M_cloud.copy() + np.array( (-0.5+_f_xoffset,   0.5+_f_yoffset) )
         _M_upper2   = _M_cloud.copy() + np.array( (-0.5+_f_xoffset,   1.5+_f_yoffset) )
         _M_lower1   = _M_cloud.copy() + np.array( (-0.5+_f_xoffset,  -1.5+_f_yoffset) )
         _M_lower2   = _M_cloud.copy() + np.array( (-0.5+_f_xoffset,  -2.5+_f_yoffset) )
         _M_right1   = _M_cloud.copy() + np.array( ( 0.5+_f_xoffset,  -0.5+_f_yoffset) )
         _M_right2   = _M_cloud.copy() + np.array( ( 1.5+_f_xoffset,  -0.5+_f_yoffset) )
-        _M_cloud    = np.vstack((_M_left1, _M_left2, 
+        _M_right25  = _M_half.copy()  + np.array( ( 2.0+_f_xoffset,  -0.5+_f_yoffset) )
+        _M_cloud    = np.vstack((_M_left1, _M_left2, _M_left25,
                                 _M_center, 
                                 _M_upper1, _M_upper2, 
                                 _M_lower1, _M_lower2,
-                                _M_right1, _M_right2 ))
+                                _M_right1, _M_right2, _M_right25 ))
 else:
     _M_cloud[:,0] *= 2*math.pi
    
