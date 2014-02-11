@@ -25,6 +25,7 @@ Gstr_synopsis = """
                                 -a                                      \\
                                 [ -A <centerMean> | -p <percentile>]    \\
                                 -C <cloudColorLst> -K <kernelColorLst>  \\
+                                -N <depth> -S <scale>                   \\
                                 -e -d                                   \\
                                 -x -h]            
                                 
@@ -56,6 +57,14 @@ Gstr_synopsis = """
         a different zorder (such as '-z 1'), the boundary can be drawn below
         the point plots.
         
+        -n 
+        If specified, will turn OFF clould normalization.
+
+        Default is to always normalize. Without normalizing, 
+        rotational skew can occur. Normalization adds extra operations 
+        (and hence time) to the projection calculations. This extra time
+        is minimal, and normalization should probably be used in all cases.
+
         -a
         If specified, will set axis ranges equal. In cases where deviation is
         much more along one axis than another, this will result in a very
@@ -78,14 +87,17 @@ Gstr_synopsis = """
         passed <percentile> as upper and lower deviation from the center 
         mean.    
 
-        -n 
-        If specified, will turn OFF clould normalization.
-
-        Default is to always normalize. Without normalizing, 
-        rotational skew can occur. Normalization adds extra operations 
-        (and hence time) to the projection calculations. This extra time
-        is minimal, and normalization should probably be used in all cases.
+        -C <cloudColorLst> -K <kernelColorLst>
+        A set of comma separated color specifiers, defining the colors of the
+        point cloud and the kernel region respectively.
         
+        -N <depth> -S <scale>  
+        If specified, will calculate and plot a range of shifted clouds. This
+        is only applicable for cases where more than one cloud has been
+        specified as input. The -N <depth> denotes the number of square
+        rotations to perform, and the -S <scale> the scale for each 
+        radial rotation.
+
         -e
         If specified, print an extent report that gives for each rotation
         the X, Y, XY, and X+Y projection extent. This is an approximation
@@ -115,6 +127,11 @@ G_numRotations              = 90
 G_f_stdWidth                = 0.5
 Gstr_cloudColorLst          = 'red,green,yellow'
 Gstr_kernelColorLst         = 'blue,cyan,magenta'
+Gb_rotateClouds             = False
+G_depth                     = 3
+G_f_depthScaleX             = 0.2
+G_f_depthScaleY             = 0.2
+
 
 def synopsis_show():
     print "USAGE: %s" % Gstr_synopsis
@@ -127,7 +144,7 @@ def deviation_plot(al_points, str_fillColor = 'red', str_edgeColor = 'black'):
     return poly
 
 try:
-    opts, remargs   = getopt.getopt(sys.argv[1:], 'hxm:s:r:dez:naA:p:C:K:')
+    opts, remargs   = getopt.getopt(sys.argv[1:], 'hxm:s:r:dez:naA:p:C:K:N:S:')
 except getopt.GetoptError:
     sys.exit(1)
 
@@ -141,6 +158,12 @@ for o, a in opts:
         Gstr_cloudColorLst          = a
     if (o == '-K'):
         Gstr_kernelColorLst         = a
+    if (o == '-N'):
+        Gb_rotateClouds             = True
+        G_depth                     = int(a)
+    if (o == '-S'):
+        G_f_depthScaleX             = a.split(',')[0]
+        G_f_depthScaleY             = a.split(',')[1]
     if (o == '-s'):
         G_f_stdWidth                = float(a)
     if (o == '-r'):
@@ -178,13 +201,22 @@ if Gb_axisEqual:
     axis('equal')
 grid() 
 
+# First read in clouds:
 for cloud in range(0, len(l_cloudFile)):
-    print("Processing %s" % l_cloudFile[cloud])
+    print("Reading %s" % l_cloudFile[cloud])
     lC_cloud.append(
                   C_centroidCloud(file      ='%s' % l_cloudFile[cloud], 
                                   stdWidth  = G_f_stdWidth,
                                   rotations = G_numRotations)        
                   )
+    print("Appending cloud matrix...")
+    lM_cloud.append(lC_cloud[cloud].cloud())
+    print("Creating boundary list holder...")
+    ll_polygonPoints.append([])
+
+# Now process the clouds, with possible iterative rotations
+for cloud in range(0, len(l_cloudFile)):
+    print("Processing %s" % l_cloudFile[cloud])
     print("Normalizing...")
     lC_cloud[cloud].normalize(Gb_normalize)
     lC_cloud[cloud].usePercentiles(Gb_usePercentiles)
@@ -193,10 +225,9 @@ for cloud in range(0, len(l_cloudFile)):
     lC_cloud[cloud].centerMean(Gstr_centerMean)
     print("Finding confidence boundary...")
     lC_cloud[cloud].confidenceBoundary_find()
-    print("Appending cloud matrix...")
-    lM_cloud.append(lC_cloud[cloud].cloud())
     print("Appending polygonPoints...")
-    ll_polygonPoints.append(lC_cloud[cloud].boundary())
+    # ll_polygonPoints.append(lC_cloud[cloud].boundary())
+    ll_polygonPoints[cloud] = lC_cloud[cloud].boundary()
     print("Plotting...")
     p.append(plot(lM_cloud[cloud][:,0], lM_cloud[cloud][:,1], 
                     color=l_cloudColor[cloud], marker='*', ls='None',
@@ -215,7 +246,7 @@ if len(l_cloudFile) > 1:
         print("group 2 = %d" % g2)
         v_tstat, v_pval = stats.ttest_ind(lM_cloud[g1], lM_cloud[g2], equal_var = True)
         print(v_pval)
-        f_pval  = np.linalg.norm(v_pval)
+        f_pval  = np.amin(v_pval)
         print("p-val for comparison between group %d and %d is %f" % (g1, g2, f_pval))
 
 show()
