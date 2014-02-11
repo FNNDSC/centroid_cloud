@@ -213,7 +213,8 @@ if len(l_cloudFile) > 1:
         g2  = combination[1]
         print("group 1 = %d" % g1)
         print("group 2 = %d" % g2)
-        v_tstat, v_pval = stats.ttest_ind(lM_cloud[g1], lM_cloud[g2], equal_var = False)
+        v_tstat, v_pval = stats.ttest_ind(lM_cloud[g1], lM_cloud[g2], equal_var = True)
+        print(v_pval)
         f_pval  = np.linalg.norm(v_pval)
         print("p-val for comparison between group %d and %d is %f" % (g1, g2, f_pval))
 
