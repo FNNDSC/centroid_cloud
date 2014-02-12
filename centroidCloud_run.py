@@ -1,13 +1,15 @@
 #!/usr/bin/env python2.7
+from    __future__              import print_function
 
-from    pylab                   import *
+from    pylab                   import  *
 import  itertools
-import  scipy.stats             as stats
-import  numpy                   as np
+import  scipy.stats             as      stats
+import  numpy                   as      np
 import  getopt
 import  sys
 
-from    C_centroidCloud import *
+from    C_centroidCloud         import  *
+from    _common                 import systemMisc as misc
 
 Gstr_synopsis = """
     
@@ -129,12 +131,12 @@ Gstr_cloudColorLst          = 'red,green,yellow'
 Gstr_kernelColorLst         = 'blue,cyan,magenta'
 Gb_rotateClouds             = False
 G_depth                     = 3
-G_f_depthScaleX             = 0.2
-G_f_depthScaleY             = 0.2
+G_f_depthScaleX             = 0.1
+G_f_depthScaleY             = 0.1
 
 
 def synopsis_show():
-    print "USAGE: %s" % Gstr_synopsis
+    print("USAGE: %s" % Gstr_synopsis)
 
 def deviation_plot(al_points, str_fillColor = 'red', str_edgeColor = 'black'):
     poly    = Polygon(al_points,
@@ -187,6 +189,7 @@ for o, a in opts:
     if (o == '-e'):
         Gb_extentReport             = True
 
+v_relrotScale       = np.array((G_f_depthScaleX, G_f_depthScaleY))
 l_cloudFile         = Gstr_cloudMatrixLst.split(',')
 l_cloudColor        = Gstr_cloudColorLst.split(',')
 l_kernelColor       = Gstr_kernelColorLst.split(',')
@@ -196,10 +199,6 @@ ll_polygonPoints    = []
 p                   = []
 poly                = []
 
-figure()
-if Gb_axisEqual:
-    axis('equal')
-grid() 
 
 # First read in clouds:
 for cloud in range(0, len(l_cloudFile)):
@@ -213,41 +212,62 @@ for cloud in range(0, len(l_cloudFile)):
     lM_cloud.append(lC_cloud[cloud].cloud())
     print("Creating boundary list holder...")
     ll_polygonPoints.append([])
+print("Preprocessing complete\n")    
 
 # Now process the clouds, with possible iterative rotations
-for cloud in range(0, len(l_cloudFile)):
-    print("Processing %s" % l_cloudFile[cloud])
-    print("Normalizing...")
-    lC_cloud[cloud].normalize(Gb_normalize)
-    lC_cloud[cloud].usePercentiles(Gb_usePercentiles)
-    lC_cloud[cloud].percentile(G_f_percentile)
-    lC_cloud[cloud].asymmetricalDeviations(Gb_asymmetricalDeviations)
-    lC_cloud[cloud].centerMean(Gstr_centerMean)
-    print("Finding confidence boundary...")
-    lC_cloud[cloud].confidenceBoundary_find()
-    print("Appending polygonPoints...")
-    # ll_polygonPoints.append(lC_cloud[cloud].boundary())
-    ll_polygonPoints[cloud] = lC_cloud[cloud].boundary()
-    print("Plotting...")
-    p.append(plot(lM_cloud[cloud][:,0], lM_cloud[cloud][:,1], 
-                    color=l_cloudColor[cloud], marker='*', ls='None',
-                    zorder = 1))
-    poly.append(deviation_plot(ll_polygonPoints[cloud], l_kernelColor[cloud])) 
-    if Gb_extentReport: print C_cloud[cloud].projectionExtent_report()
+if Gb_rotateClouds:
+    l_rotaryPoints  = misc.neighbours_findFast(2, G_depth)
+else:   
+    l_rotaryPoints  = np.array((0,0))
 
+print(l_rotaryPoints)
+l_rotaryPoints = l_rotaryPoints * v_relrotScale
+print(l_rotaryPoints)
 
-if len(l_cloudFile) > 1:
-    l_combinations = list(itertools.combinations(range(len(l_cloudFile)), 2))
-    print(l_combinations)
-    for combination in l_combinations:
-        g1  = combination[0]
-        g2  = combination[1]
-        print("group 1 = %d" % g1)
-        print("group 2 = %d" % g2)
-        v_tstat, v_pval = stats.ttest_ind(lM_cloud[g1], lM_cloud[g2], equal_var = True)
-        print(v_pval)
-        f_pval  = np.amin(v_pval)
-        print("p-val for comparison between group %d and %d is %f" % (g1, g2, f_pval))
+figure()
+if Gb_axisEqual:
+    axis('equal')
+grid() 
 
-show()
+for reltran in l_rotaryPoints:
+    print("Relative shape translation: ", end="")
+    print(reltran)
+    for cloud in range(0, len(l_cloudFile)):
+        if not cloud:
+            # all clouds except the base are displaced by the 
+            # current translation
+            print("translating cloud %s" % l_cloudFile[cloud])
+            lC_cloud[cloud].cloud(lM_cloud[cloud] + reltran)
+        print("Processing %s" % l_cloudFile[cloud])
+        print("Normalizing...")
+        lC_cloud[cloud].normalize(Gb_normalize)
+        lC_cloud[cloud].usePercentiles(Gb_usePercentiles)
+        lC_cloud[cloud].percentile(G_f_percentile)
+        lC_cloud[cloud].asymmetricalDeviations(Gb_asymmetricalDeviations)
+        lC_cloud[cloud].centerMean(Gstr_centerMean)
+        print("Finding confidence boundary...")
+        lC_cloud[cloud].confidenceBoundary_find()
+        print("Appending polygonPoints...")
+        # ll_polygonPoints.append(lC_cloud[cloud].boundary())
+        ll_polygonPoints[cloud] = lC_cloud[cloud].boundary()
+        print("Plotting...")
+        p.append(plot(lM_cloud[cloud][:,0], lM_cloud[cloud][:,1], 
+                        color=l_cloudColor[cloud], marker='*', ls='None',
+                        zorder = 1))
+        poly.append(deviation_plot(ll_polygonPoints[cloud], l_kernelColor[cloud])) 
+        if Gb_extentReport: print(C_cloud[cloud].projectionExtent_report())
+
+    if len(l_cloudFile) > 1:
+        l_combinations = list(itertools.combinations(range(len(l_cloudFile)), 2))
+        print(l_combinations)
+        for combination in l_combinations:
+            g1  = combination[0]
+            g2  = combination[1]
+            print("group 1 = %d" % g1)
+            print("group 2 = %d" % g2)
+            v_tstat, v_pval = stats.ttest_ind(lM_cloud[g1], lM_cloud[g2], equal_var = True)
+            print(v_pval)
+            f_pval  = np.amin(v_pval)
+            print("p-val for comparison between group %d and %d is %f" % (g1, g2, f_pval))
+    show()
 
