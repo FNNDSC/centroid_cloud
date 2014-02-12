@@ -7,6 +7,7 @@ import  scipy.stats             as      stats
 import  numpy                   as      np
 import  getopt
 import  sys
+import	os
 
 from    C_centroidCloud         import  *
 from    _common                 import systemMisc as misc
@@ -218,22 +219,20 @@ print("Preprocessing complete\n")
 if Gb_rotateClouds:
     l_rotaryPoints  = misc.neighbours_findFast(2, G_depth)
 else:   
-    l_rotaryPoints  = np.array((0,0))
+    l_rotaryPoints  = [ np.array((0,0)) ]
 
-print(l_rotaryPoints)
 l_rotaryPoints = l_rotaryPoints * v_relrotScale
-print(l_rotaryPoints)
 
-figure()
-if Gb_axisEqual:
-    axis('equal')
-grid() 
 
 for reltran in l_rotaryPoints:
     print("Relative shape translation: ", end="")
     print(reltran)
+	figure()
+	if Gb_axisEqual:
+	    axis('equal')
+	grid() 
     for cloud in range(0, len(l_cloudFile)):
-        if not cloud:
+        if cloud:
             # all clouds except the base are displaced by the 
             # current translation
             print("translating cloud %s" % l_cloudFile[cloud])
@@ -247,7 +246,7 @@ for reltran in l_rotaryPoints:
         lC_cloud[cloud].centerMean(Gstr_centerMean)
         print("Finding confidence boundary...")
         lC_cloud[cloud].confidenceBoundary_find()
-        print("Appending polygonPoints...")
+        print("Extracting polygonPoints...")
         # ll_polygonPoints.append(lC_cloud[cloud].boundary())
         ll_polygonPoints[cloud] = lC_cloud[cloud].boundary()
         print("Plotting...")
@@ -263,6 +262,11 @@ for reltran in l_rotaryPoints:
         for combination in l_combinations:
             g1  = combination[0]
             g2  = combination[1]
+            _str_title = '%s-%s-x%f-y%f' % (
+            		os.path.splitext(os.path.basename(l_cloudFile[g1])),
+            		os.path.splitext(os.path.basename(l_cloudFile[g2])),
+            		reltran[0], reltran[1]
+            		)
             print("group 1 = %d" % g1)
             print("group 2 = %d" % g2)
             v_tstat, v_pval = stats.ttest_ind(lM_cloud[g1], lM_cloud[g2], equal_var = True)
