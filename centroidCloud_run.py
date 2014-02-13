@@ -227,10 +227,10 @@ l_rotaryPoints = l_rotaryPoints * v_relrotScale
 for reltran in l_rotaryPoints:
     print("Relative shape translation: ", end="")
     print(reltran)
-	figure()
-	if Gb_axisEqual:
-	    axis('equal')
-	grid() 
+    figure()
+    if Gb_axisEqual:
+        axis('equal')
+    grid() 
     for cloud in range(0, len(l_cloudFile)):
         if cloud:
             # all clouds except the base are displaced by the 
