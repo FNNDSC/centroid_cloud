@@ -165,6 +165,17 @@ def deviation_plot(al_points, str_fillColor = 'red', str_edgeColor = 'black'):
     gca().add_patch(poly)
     return poly
 
+def cloud_normalize(aM):
+    '''
+    For a cloud of N-dimensional points in <aM>, return a vector of normals
+    to each point. This has the effect of reducing a high dimensional space
+    to a single dimensional vector.
+    '''
+    _v_norm = []
+    for p in aM:
+        _v_norm.append(np.linalg.norm(p))
+    return _v_norm
+
 try:
     opts, remargs   = getopt.getopt(sys.argv[1:], 'hxm:s:r:dez:naA:p:C:K:N:S:O:')
 except getopt.GetoptError:
@@ -218,7 +229,9 @@ l_cloudColor        = Gstr_cloudColorLst.split(',')
 l_kernelColor       = Gstr_kernelColorLst.split(',')
 lC_cloud            = []
 lM_cloudOrig        = []
+lv_normOrig         = []
 lM_cloud            = []
+lv_norm             = []
 ll_polygonPoints    = []
 p                   = []
 poly                = []
@@ -232,9 +245,11 @@ for cloud in range(0, len(l_cloudFile)):
                                   stdWidth  = G_f_stdWidth,
                                   rotations = G_numRotations)        
                   )
-    print("\tappending cloud matrix...")
+    print("\tappending cloud matrix and norm vectors...")
     lM_cloudOrig.append(lC_cloud[cloud].cloud())
     lM_cloud.append(lC_cloud[cloud].cloud())
+    lv_normOrig.append(cloud_normalize(lM_cloud[cloud]))
+    lv_norm.append(lv_normOrig[cloud])
     print("\tcreating boundary list holder...")
     ll_polygonPoints.append([])
 print("\nPreprocessing complete.\n")    
@@ -253,7 +268,8 @@ M_pvalInd       = l_rotaryPoints.copy() + v_indoffset
 v_pval          = np.zeros((len(M_pvalInd),1))
 M_pvalflt       = np.column_stack( (M_pvalInd, v_pval) )
 M_pval          = np.zeros((2*G_depth+1, 2*G_depth+1))
-M_pvalNorm      = np.zeros((2*G_depth+1, 2*G_depth+1))
+M_pvalmNorm     = np.zeros((2*G_depth+1, 2*G_depth+1))
+M_pvalvNorm     = np.zeros((2*G_depth+1, 2*G_depth+1))
 
 indexTotal      = 0
 b_baseProcessed = False
@@ -265,13 +281,14 @@ for reltran in l_rotaryPoints:
     grid() 
     for cloud in range(0, len(l_cloudFile)):
         print("\nProcessing '%s' containing %d points..." % \
-                (l_cloudFile[cloud], np.size(lM_cloud[cloud])))
+                (l_cloudFile[cloud], len(lM_cloud[cloud])))
         if cloud:
             # all clouds except the base are displaced by the 
             # current translation
             print("\ttranslating cloud '%s' by " % l_cloudFile[cloud], end="")
             print(reltran)
             lC_cloud[cloud].cloud(lM_cloudOrig[cloud] + reltran)
+            lv_norm[cloud] = cloud_normalize(lC_cloud[cloud].cloud())
         # We only need to process the "base" cloud ONCE in repeated
         # reltrans lookups...
         if (not b_baseProcessed and not cloud) or (b_baseProcessed and cloud):
@@ -311,23 +328,29 @@ for reltran in l_rotaryPoints:
             # print("group 2 = %d" % g2)
             v_tstat, v_pval = stats.ttest_ind(lM_cloud[g1], lM_cloud[g2], equal_var = False)
             print(v_pval)
+            f_tstatvNorm, f_pvalvNorm = stats.ttest_ind(lv_norm[g1], lv_norm[g2], equal_var = False)
+            print(f_pvalvNorm)
             f_pvalMin                           = np.amin(v_pval)
-            f_pvalNorm                          = np.linalg.norm(v_pval)
+            f_pvalmNorm                         = np.linalg.norm(v_pval)
             v_ind                               = reltran/v_reltranScale + \
                                                         v_indoffset - v_nonBaseOffset
             M_pval[v_ind[0],v_ind[1]]           = f_pvalMin
-            M_pvalNorm[v_ind[0],v_ind[1]]       = f_pvalNorm
-            print("\tmin  p-val for comparison between group '%s' and '%s' is %f" % \
+            M_pvalmNorm[v_ind[0],v_ind[1]]      = f_pvalmNorm
+            M_pvalvNorm[v_ind[0],v_ind[1]]      = f_pvalvNorm
+            print("\tmin  p-val for comparison between group '%s' and '%s' is    %f" % \
                 (l_cloudFile[g1], l_cloudFile[g2], f_pvalMin))
-            print("\tnorm p-val for comparison between group '%s' and '%s' is %f" % \
-                (l_cloudFile[g1], l_cloudFile[g2], f_pvalNorm))
+            print("\tnorm p-val for comparison between group '%s' and '%s' is    %f" % \
+                (l_cloudFile[g1], l_cloudFile[g2], f_pvalmNorm))
+            print("\tp-val for comparison between normed groups '%s' and '%s' is %f" % \
+                (l_cloudFile[g1], l_cloudFile[g2], f_pvalvNorm))
             print("\tsaving figure '%s'..." % _str_title)
             savefig('%s.pdf' % _str_title, bbox_inches=0)
             savefig('%s.png' % _str_title, bbox_inches=0)
             # Save pval matrices on each loop... allows for some data storage
             # even while processing is incomplete.
-            np.savetxt('%s-pval.txt'     % _str_title, M_pval,          fmt='%10.7f')
-            np.savetxt('%s-pvalNorm.txt' % _str_title, M_pvalNorm,      fmt='%10.7f')
+            np.savetxt('%s-pval.txt'      % _str_title, M_pval,          fmt='%10.7f')
+            np.savetxt('%s-pvalmNorm.txt' % _str_title, M_pvalmNorm,     fmt='%10.7f')
+            np.savetxt('%s-pvalvNorm.txt' % _str_title, M_pvalvNorm,     fmt='%10.7f')
     else:
             _str_title = '%s' % (
                         os.path.splitext(os.path.basename(l_cloudFile[0]))[0],
