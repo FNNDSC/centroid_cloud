@@ -29,6 +29,7 @@ Gstr_synopsis = """
                                 [ -A <centerMean> | -p <percentile>]    \\
                                 -C <cloudColorLst> -K <kernelColorLst>  \\
                                 -N <depth> -S <scale>                   \\
+                                -O <offsetX,offsetY>                    \\
                                 -e -d                                   \\
                                 -x -h]            
                                 
@@ -37,10 +38,21 @@ Gstr_synopsis = """
         centroidCloud_run.py is a simple "driver" for the C_centroidCloud
         class. This class accepts a file defining a cloud of points in a 
         2D space, and then returns a polygon of points defining the projection
-        of the cloud deviation along a set of rotated axes.
-        
-        In the default case, there are 90 rotations corresponding to a 1 degree
-        sweep through the 1st Cartesian quadrant.
+        of the cloud deviation along a set of rotated axes. In the default 
+        case, there are 90 rotations corresponding to a 1 degree sweep 
+        through the 1st Cartesian quadrant.
+
+        Although this driver was initially conceived as a single cloud
+        processor, it has been extensively expanded to function also as
+        multiple cloud analysis tool. If multiple clouds are passed as
+        input, this program will plot all clouds and their confidence
+        boundaries, as well as analyze all the p-val separations between
+        all combinations of inputs.
+
+        The script will also accept offsets to non-base clouds and will
+        shift non-base clouds accordingly. Finally, it can also loop non-base
+        clouds over square spirals about the base-cloud. The base-cloud is
+        simply the first cloud input into the system.
         
     ARGUMENTS
     
@@ -49,7 +61,8 @@ Gstr_synopsis = """
         be plotted and its centroid cloud determined.
 
         -r <rotations>
-        The number of rotations, evenly spread out between 0...90 degrees.
+        The number of rotations for the confidence boundary for each cloud, 
+        evenly spread out between 0...90 degrees.
 
         -s <stdWidth>
         The width of the standard deviation cloud
@@ -101,6 +114,10 @@ Gstr_synopsis = """
         rotations to perform, and the -S <scale> the scale for each 
         radial rotation.
 
+        -O <offsetX,offsetY>                   
+        If specified, will shift non-base clouds by offset. This is useful for
+        once-off tests.
+
         -e
         If specified, print an extent report that gives for each rotation
         the X, Y, XY, and X+Y projection extent. This is an approximation
@@ -131,10 +148,12 @@ G_f_stdWidth                = 0.5
 Gstr_cloudColorLst          = 'red,green,yellow'
 Gstr_kernelColorLst         = 'blue,cyan,magenta'
 Gb_rotateClouds             = False
-G_depth                     = 3
+G_depth                     = 0
 G_f_depthScaleX             = 0.1
 G_f_depthScaleY             = 0.1
-
+Gb_nonBaseOffset            = False
+G_f_nonBaseOffsetX          = 0.0
+G_f_nonBaseOffsetY          = 0.0
 
 def synopsis_show():
     print("USAGE: %s" % Gstr_synopsis)
@@ -147,7 +166,7 @@ def deviation_plot(al_points, str_fillColor = 'red', str_edgeColor = 'black'):
     return poly
 
 try:
-    opts, remargs   = getopt.getopt(sys.argv[1:], 'hxm:s:r:dez:naA:p:C:K:N:S:')
+    opts, remargs   = getopt.getopt(sys.argv[1:], 'hxm:s:r:dez:naA:p:C:K:N:S:O:')
 except getopt.GetoptError:
     sys.exit(1)
 
@@ -165,8 +184,11 @@ for o, a in opts:
         Gb_rotateClouds             = True
         G_depth                     = int(a)
     if (o == '-S'):
-        G_f_depthScaleX             = a.split(',')[0]
-        G_f_depthScaleY             = a.split(',')[1]
+        G_f_depthScaleX             = float(a.split(',')[0])
+        G_f_depthScaleY             = float(a.split(',')[1])
+    if (o == '-O'):
+        G_f_nonBaseOffsetX          = float(a.split(',')[0])
+        G_f_nonBaseOffsetY          = float(a.split(',')[1])
     if (o == '-s'):
         G_f_stdWidth                = float(a)
     if (o == '-r'):
@@ -190,11 +212,12 @@ for o, a in opts:
     if (o == '-e'):
         Gb_extentReport             = True
 
-v_relrotScale       = np.array((G_f_depthScaleX, G_f_depthScaleY))
+v_reltranScale      = np.array((G_f_depthScaleX, G_f_depthScaleY))
 l_cloudFile         = Gstr_cloudMatrixLst.split(',')
 l_cloudColor        = Gstr_cloudColorLst.split(',')
 l_kernelColor       = Gstr_kernelColorLst.split(',')
 lC_cloud            = []
+lM_cloudOrig        = []
 lM_cloud            = []
 ll_polygonPoints    = []
 p                   = []
@@ -203,53 +226,68 @@ poly                = []
 
 # First read in clouds:
 for cloud in range(0, len(l_cloudFile)):
-    print("Reading %s" % l_cloudFile[cloud])
+    print("Reading '%s'..." % l_cloudFile[cloud])
     lC_cloud.append(
                   C_centroidCloud(file      ='%s' % l_cloudFile[cloud], 
                                   stdWidth  = G_f_stdWidth,
                                   rotations = G_numRotations)        
                   )
-    print("Appending cloud matrix...")
+    print("\tappending cloud matrix...")
+    lM_cloudOrig.append(lC_cloud[cloud].cloud())
     lM_cloud.append(lC_cloud[cloud].cloud())
-    print("Creating boundary list holder...")
+    print("\tcreating boundary list holder...")
     ll_polygonPoints.append([])
-print("Preprocessing complete\n")    
+print("\nPreprocessing complete.\n")    
 
 # Now process the clouds, with possible iterative rotations
 if Gb_rotateClouds:
-    l_rotaryPoints  = misc.neighbours_findFast(2, G_depth)
+    l_rotaryPoints  = misc.neighbours_findFast(2, G_depth, includeOrigin=True)
 else:   
     l_rotaryPoints  = [ np.array((0,0)) ]
 
-l_rotaryPoints = l_rotaryPoints * v_relrotScale
+v_nonBaseOffset = np.array( (G_f_nonBaseOffsetX, G_f_nonBaseOffsetY))
+l_rotaryPoints  = l_rotaryPoints * v_reltranScale + v_nonBaseOffset
 
+v_indoffset     = np.array( (G_depth, G_depth ))
+M_pvalInd       = l_rotaryPoints.copy() + v_indoffset
+v_pval          = np.zeros((len(M_pvalInd),1))
+M_pvalflt       = np.column_stack( (M_pvalInd, v_pval) )
+M_pval          = np.zeros((2*G_depth+1, 2*G_depth+1))
+M_pvalNorm      = np.zeros((2*G_depth+1, 2*G_depth+1))
 
+indexTotal      = 0
+b_baseProcessed = False
 for reltran in l_rotaryPoints:
-    print("Relative shape translation: ", end="")
-    print(reltran)
-    figure()
+    print(M_pval)
+    figure(indexTotal)
     if Gb_axisEqual:
         axis('equal')
     grid() 
     for cloud in range(0, len(l_cloudFile)):
+        print("\nProcessing '%s' containing %d points..." % \
+                (l_cloudFile[cloud], np.size(lM_cloud[cloud])))
         if cloud:
             # all clouds except the base are displaced by the 
             # current translation
-            print("translating cloud %s" % l_cloudFile[cloud])
-            lC_cloud[cloud].cloud(lM_cloud[cloud] + reltran)
-        print("Processing %s" % l_cloudFile[cloud])
-        print("Normalizing...")
-        lC_cloud[cloud].normalize(Gb_normalize)
-        lC_cloud[cloud].usePercentiles(Gb_usePercentiles)
-        lC_cloud[cloud].percentile(G_f_percentile)
-        lC_cloud[cloud].asymmetricalDeviations(Gb_asymmetricalDeviations)
-        lC_cloud[cloud].centerMean(Gstr_centerMean)
-        print("Finding confidence boundary...")
-        lC_cloud[cloud].confidenceBoundary_find()
-        print("Extracting polygonPoints...")
-        # ll_polygonPoints.append(lC_cloud[cloud].boundary())
+            print("\ttranslating cloud '%s' by " % l_cloudFile[cloud], end="")
+            print(reltran)
+            lC_cloud[cloud].cloud(lM_cloudOrig[cloud] + reltran)
+        # We only need to process the "base" cloud ONCE in repeated
+        # reltrans lookups...
+        if (not b_baseProcessed and not cloud) or (b_baseProcessed and cloud):
+            print("\tnormalizing...")
+            lC_cloud[cloud].normalize(Gb_normalize)
+            lC_cloud[cloud].usePercentiles(Gb_usePercentiles)
+            lC_cloud[cloud].percentile(G_f_percentile)
+            lC_cloud[cloud].asymmetricalDeviations(Gb_asymmetricalDeviations)
+            lC_cloud[cloud].centerMean(Gstr_centerMean)
+            print("\tfinding confidence boundary...")
+            lC_cloud[cloud].confidenceBoundary_find()
+            b_baseProcessed = True
+        print("\textracting polygonPoints...")
         ll_polygonPoints[cloud] = lC_cloud[cloud].boundary()
-        print("Plotting...")
+        print("\tplotting...")
+        lM_cloud[cloud]         = lC_cloud[cloud].cloud()
         p.append(plot(lM_cloud[cloud][:,0], lM_cloud[cloud][:,1], 
                         color=l_cloudColor[cloud], marker='*', ls='None',
                         zorder = 1))
@@ -257,21 +295,50 @@ for reltran in l_rotaryPoints:
         if Gb_extentReport: print(C_cloud[cloud].projectionExtent_report())
 
     if len(l_cloudFile) > 1:
+        print("Processing statistics...")
         l_combinations = list(itertools.combinations(range(len(l_cloudFile)), 2))
-        print(l_combinations)
+        # print(l_combinations)
         for combination in l_combinations:
             g1  = combination[0]
             g2  = combination[1]
-            _str_title = '%s-%s-x%f-y%f' % (
-            		os.path.splitext(os.path.basename(l_cloudFile[g1])),
-            		os.path.splitext(os.path.basename(l_cloudFile[g2])),
+            _str_title = '%s-%s-x%5.3f-y%5.3f' % (
+            		os.path.splitext(os.path.basename(l_cloudFile[g1]))[0],
+            		os.path.splitext(os.path.basename(l_cloudFile[g2]))[0],
             		reltran[0], reltran[1]
             		)
-            print("group 1 = %d" % g1)
-            print("group 2 = %d" % g2)
-            v_tstat, v_pval = stats.ttest_ind(lM_cloud[g1], lM_cloud[g2], equal_var = True)
+            title(_str_title)
+            # print("group 1 = %d" % g1)
+            # print("group 2 = %d" % g2)
+            v_tstat, v_pval = stats.ttest_ind(lM_cloud[g1], lM_cloud[g2], equal_var = False)
             print(v_pval)
-            f_pval  = np.amin(v_pval)
-            print("p-val for comparison between group %d and %d is %f" % (g1, g2, f_pval))
-    show()
+            f_pvalMin                           = np.amin(v_pval)
+            f_pvalNorm                          = np.linalg.norm(v_pval)
+            v_ind                               = reltran/v_reltranScale + \
+                                                        v_indoffset - v_nonBaseOffset
+            M_pval[v_ind[0],v_ind[1]]           = f_pvalMin
+            M_pvalNorm[v_ind[0],v_ind[1]]       = f_pvalNorm
+            print("\tmin  p-val for comparison between group '%s' and '%s' is %f" % \
+                (l_cloudFile[g1], l_cloudFile[g2], f_pvalMin))
+            print("\tnorm p-val for comparison between group '%s' and '%s' is %f" % \
+                (l_cloudFile[g1], l_cloudFile[g2], f_pvalNorm))
+            print("\tsaving figure '%s'..." % _str_title)
+            savefig('%s.pdf' % _str_title, bbox_inches=0)
+            savefig('%s.png' % _str_title, bbox_inches=0)
+            # Save pval matrices on each loop... allows for some data storage
+            # even while processing is incomplete.
+            np.savetxt('%s-pval.txt'     % _str_title, M_pval,          fmt='%10.7f')
+            np.savetxt('%s-pvalNorm.txt' % _str_title, M_pvalNorm,      fmt='%10.7f')
+    else:
+            _str_title = '%s' % (
+                        os.path.splitext(os.path.basename(l_cloudFile[0]))[0],
+                        )
+            title(_str_title)
+            print("\tsaving figure '%s'..." % _str_title)
+            savefig('%s.pdf' % _str_title, bbox_inches=0)
+            savefig('%s.png' % _str_title, bbox_inches=0)
+
+    indexTotal += 1
+
+
+    # show()
 
