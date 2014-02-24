@@ -12,6 +12,10 @@ import	os
 from    C_centroidCloud         import  *
 from    _common                 import systemMisc as misc
 
+from    shapely.geometry        import  Point           as sgPoint
+from    shapely.geometry        import  Polygon         as sgPolygon
+from    shapely.geometry        import  MultiPolygon    as sgMultiPolygon
+
 Gstr_synopsis = """
     
     NAME
@@ -30,7 +34,7 @@ Gstr_synopsis = """
                                 -C <cloudColorLst> -K <kernelColorLst>  \\
                                 -N <depth> -S <scale>                   \\
                                 -O <offsetX,offsetY>                    \\
-                                -e -d                                   \\
+                                -e -d -X                                \\
                                 -x -h]            
                                 
     DESCRIPTION
@@ -86,6 +90,9 @@ Gstr_synopsis = """
         much more along one axis than another, this will result in a very
         "thin" boundary polygon.
 
+        -X 
+        If specified, plot convex hull boundaries.
+
         -A <centerMean>
         If specified, will turn ON asymmetrical deviations flag. The
         <centerMean> controls the concept of "center" for the asymmetrical
@@ -139,6 +146,7 @@ Gb_extentReport             = False
 Gb_normalize                = True
 Gb_asymmetricalDeviations   = False
 Gb_usePercentiles           = False
+Gb_convexHullUse            = False
 G_f_percentile              = 25
 Gstr_centerMean             = 'original'
 Gb_axisEqual                = False
@@ -176,8 +184,18 @@ def cloud_normalize(aM):
         _v_norm.append(np.linalg.norm(p))
     return _v_norm
 
+def convexHull_boundaryFind(ar_boundary):
+    '''
+    For a given np array <ar_boundary>, deterime the convex hull 
+    (implicitly assuming 2D spaces).
+    
+    Basically, this builds a polygon, finds the convex hull, and
+    translates back to an np.array.
+    '''
+    return np.asarray( sgPolygon(ar_boundary).convex_hull.exterior )
+
 try:
-    opts, remargs   = getopt.getopt(sys.argv[1:], 'hxm:s:r:dez:naA:p:C:K:N:S:O:')
+    opts, remargs   = getopt.getopt(sys.argv[1:], 'hxm:s:r:dez:naA:p:C:K:N:S:O:X')
 except getopt.GetoptError:
     sys.exit(1)
 
@@ -185,6 +203,8 @@ for o, a in opts:
     if (o == '-x' or o == '-h'):
         synopsis_show()
         sys.exit(1)
+    if (o == '-X'):
+        Gb_convexHullUse            = True
     if (o == '-m'):
         Gstr_cloudMatrixLst         = a
     if (o == '-C'):
@@ -303,6 +323,10 @@ for reltran in l_rotaryPoints:
             b_baseProcessed = True
         print("\textracting polygonPoints...")
         ll_polygonPoints[cloud] = lC_cloud[cloud].boundary()
+        if Gb_convexHullUse:
+            print("\tshaping convex hull...")
+            ll_polygonPoints[cloud] = \
+                convexHull_boundaryFind(ll_polygonPoints[cloud])
         print("\tplotting...")
         lM_cloud[cloud]         = lC_cloud[cloud].cloud()
         p.append(plot(lM_cloud[cloud][:,0], lM_cloud[cloud][:,1], 
@@ -344,21 +368,23 @@ for reltran in l_rotaryPoints:
             print("\tp-val for comparison between normed groups '%s' and '%s' is %f" % \
                 (l_cloudFile[g1], l_cloudFile[g2], f_pvalvNorm))
             print("\tsaving figure '%s'..." % _str_title)
-            savefig('%s.pdf' % _str_title, bbox_inches=0)
-            savefig('%s.png' % _str_title, bbox_inches=0)
+            misc.mkdir(_str_title)
+            savefig('%s/%s.pdf' % (_str_title, _str_title), bbox_inches=0)
+            savefig('%s/%s.png' % (_str_title, _str_title), bbox_inches=0)
             # Save pval matrices on each loop... allows for some data storage
             # even while processing is incomplete.
-            np.savetxt('%s-pval.txt'      % _str_title, M_pval,          fmt='%10.7f')
-            np.savetxt('%s-pvalmNorm.txt' % _str_title, M_pvalmNorm,     fmt='%10.7f')
-            np.savetxt('%s-pvalvNorm.txt' % _str_title, M_pvalvNorm,     fmt='%10.7f')
+            np.savetxt('%s/%s-pval.txt'      % (_str_title, _str_title), M_pval,          fmt='%10.7f')
+            np.savetxt('%s/%s-pvalmNorm.txt' % (_str_title, _str_title), M_pvalmNorm,     fmt='%10.7f')
+            np.savetxt('%s/%s-pvalvNorm.txt' % (_str_title, _str_title), M_pvalvNorm,     fmt='%10.7f')
     else:
             _str_title = '%s' % (
                         os.path.splitext(os.path.basename(l_cloudFile[0]))[0],
                         )
             title(_str_title)
+            misc.mkdir(_str_title)
             print("\tsaving figure '%s'..." % _str_title)
-            savefig('%s.pdf' % _str_title, bbox_inches=0)
-            savefig('%s.png' % _str_title, bbox_inches=0)
+            savefig('%s/%s.pdf' % (_str_title, _str_title), bbox_inches=0)
+            savefig('%s/%s.png' % (_str_title, _str_title), bbox_inches=0)
 
     indexTotal += 1
 
