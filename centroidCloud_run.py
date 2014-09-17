@@ -169,7 +169,8 @@ def synopsis_show():
 def deviation_plot(al_points, str_fillColor = 'red', str_edgeColor = 'black'):
     poly    = Polygon(al_points,
                         facecolor = str_fillColor,
-                        edgecolor = str_edgeColor, zorder=Gi_zorder)
+                        edgecolor = str_edgeColor, zorder=Gi_zorder,
+                        alpha     = 0.5)
     gca().add_patch(poly)
     return poly
 
@@ -283,7 +284,7 @@ else:
 v_nonBaseOffset = np.array( (G_f_nonBaseOffsetX, G_f_nonBaseOffsetY))
 l_rotaryPoints  = l_rotaryPoints * v_reltranScale + v_nonBaseOffset
 
-v_indoffset     = np.array( (G_depth, G_depth ))
+v_indoffset     = np.array( (G_depth, G_depth ) ) * 0.0;
 M_pvalInd       = l_rotaryPoints.copy() + v_indoffset
 v_pval          = np.zeros((len(M_pvalInd),1))
 M_pvalflt       = np.column_stack( (M_pvalInd, v_pval) )
@@ -327,7 +328,7 @@ for reltran in l_rotaryPoints:
             print("\tshaping convex hull...")
             ll_polygonPoints[cloud] = \
                 convexHull_boundaryFind(ll_polygonPoints[cloud])
-        print("\tplotting...")
+        print("\t...")
         lM_cloud[cloud]         = lC_cloud[cloud].cloud()
         p.append(plot(lM_cloud[cloud][:,0], lM_cloud[cloud][:,1], 
                         color=l_cloudColor[cloud], marker='*', ls='None',
@@ -351,13 +352,15 @@ for reltran in l_rotaryPoints:
             # print("group 1 = %d" % g1)
             # print("group 2 = %d" % g2)
             v_tstat, v_pval = stats.ttest_ind(lM_cloud[g1], lM_cloud[g2], equal_var = False)
-            print(v_pval)
             f_tstatvNorm, f_pvalvNorm = stats.ttest_ind(lv_norm[g1], lv_norm[g2], equal_var = False)
-            print(f_pvalvNorm)
             f_pvalMin                           = np.amin(v_pval)
             f_pvalmNorm                         = np.linalg.norm(v_pval)
-            v_ind                               = reltran/v_reltranScale + \
+            if not G_depth:
+                v_ind                           = np.array( (0, 0) )
+            else:
+                v_ind                           = reltran/v_reltranScale + \
                                                         v_indoffset - v_nonBaseOffset
+            
             M_pval[v_ind[0],v_ind[1]]           = f_pvalMin
             M_pvalmNorm[v_ind[0],v_ind[1]]      = f_pvalmNorm
             M_pvalvNorm[v_ind[0],v_ind[1]]      = f_pvalvNorm
