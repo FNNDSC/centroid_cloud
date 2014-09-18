@@ -174,6 +174,11 @@ def deviation_plot(al_points, str_fillColor = 'red', str_edgeColor = 'black'):
     gca().add_patch(poly)
     return poly
 
+def aspectRatio_square(aspect = 1):
+    extent                    = np.array( (0, 6.20, 4.80, 0))
+    print(extent)
+    axes().set_aspect(abs((extent[1]-extent[0])/(extent[3]-extent[2]))/aspect)
+
 def cloud_normalize(aM):
     '''
     For a cloud of N-dimensional points in <aM>, return a vector of normals
@@ -297,6 +302,7 @@ b_baseProcessed = False
 for reltran in l_rotaryPoints:
     print(M_pval)
     figure(indexTotal)
+    axis('auto')
     if Gb_axisEqual:
         axis('equal')
     grid() 
@@ -372,6 +378,7 @@ for reltran in l_rotaryPoints:
                 (l_cloudFile[g1], l_cloudFile[g2], f_pvalvNorm))
             print("\tsaving figure '%s'..." % _str_title)
             misc.mkdir(_str_title)
+            #aspectRatio_square(aspect=1)
             savefig('%s/%s.pdf' % (_str_title, _str_title), bbox_inches=0)
             savefig('%s/%s.png' % (_str_title, _str_title), bbox_inches=0)
             # Save pval matrices on each loop... allows for some data storage
