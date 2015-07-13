@@ -109,6 +109,9 @@ Gstr_synopsis = """
         If specified, trigger a descriptive statistical analysis, using the
         passed <percentile> as upper and lower deviation from the center 
         mean.    
+        
+        -M <marker>
+        Set marker symbol to <marker>. Default = "*".
 
         -C <cloudColorLst> -K <kernelColorLst>
         A set of comma separated color specifiers, defining the colors of the
@@ -162,6 +165,7 @@ G_f_depthScaleY             = 0.1
 Gb_nonBaseOffset            = False
 G_f_nonBaseOffsetX          = 0.0
 G_f_nonBaseOffsetY          = 0.0
+G_marker                    = "*"
 
 def synopsis_show():
     print("USAGE: %s" % Gstr_synopsis)
@@ -201,7 +205,7 @@ def convexHull_boundaryFind(ar_boundary):
     return np.asarray( sgPolygon(ar_boundary).convex_hull.exterior )
 
 try:
-    opts, remargs   = getopt.getopt(sys.argv[1:], 'hxm:s:r:dez:naA:p:C:K:N:S:O:X')
+    opts, remargs   = getopt.getopt(sys.argv[1:], 'hxm:s:r:dez:naA:p:C:K:N:S:O:XM:')
 except getopt.GetoptError:
     sys.exit(1)
 
@@ -213,6 +217,8 @@ for o, a in opts:
         Gb_convexHullUse            = True
     if (o == '-m'):
         Gstr_cloudMatrixLst         = a
+    if (o == '-M'):
+        G_marker                    = a
     if (o == '-C'):
         Gstr_cloudColorLst          = a
     if (o == '-K'):
@@ -337,7 +343,7 @@ for reltran in l_rotaryPoints:
         print("\t...")
         lM_cloud[cloud]         = lC_cloud[cloud].cloud()
         p.append(plot(lM_cloud[cloud][:,0], lM_cloud[cloud][:,1], 
-                        color=l_cloudColor[cloud], marker='*', ls='None',
+                        color=l_cloudColor[cloud], marker=G_marker, ls='None',
                         zorder = 1))
         poly.append(deviation_plot(ll_polygonPoints[cloud], l_kernelColor[cloud])) 
         if Gb_extentReport: print(C_cloud[cloud].projectionExtent_report())
