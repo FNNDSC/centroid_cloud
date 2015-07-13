@@ -17,33 +17,35 @@ from    shapely.geometry        import  Polygon         as sgPolygon
 from    shapely.geometry        import  MultiPolygon    as sgMultiPolygon
 
 Gstr_synopsis = """
-    
+
     NAME
- 
+
         centroidCloud_run.py
-        
+
     SYNOPSIS
-    
+
         centroidCloud_run.py    -m <cloudFileLst>                       \\
                                 [-r <rotations>                         \\
                                 -s <stdWidth>                           \\
                                 -z <zorder>                             \\
                                 -n                                      \\
+                                -T                                      \\
+                                -c                                      \\
                                 -a                                      \\
-                                [ -A <centerMean> | -p <percentile>]    \\
+                                -A <centerMean> | -p <percentile>       \\
                                 -C <cloudColorLst> -K <kernelColorLst>  \\
                                 -N <depth> -S <scale>                   \\
                                 -O <offsetX,offsetY>                    \\
                                 -e -d -X                                \\
-                                -x -h]            
-                                
+                                -x -h]
+
     DESCRIPTION
-    
+
         centroidCloud_run.py is a simple "driver" for the C_centroidCloud
-        class. This class accepts a file defining a cloud of points in a 
+        class. This class accepts a file defining a cloud of points in a
         2D space, and then returns a polygon of points defining the projection
-        of the cloud deviation along a set of rotated axes. In the default 
-        case, there are 90 rotations corresponding to a 1 degree sweep 
+        of the cloud deviation along a set of rotated axes. In the default
+        case, there are 90 rotations corresponding to a 1 degree sweep
         through the 1st Cartesian quadrant.
 
         Although this driver was initially conceived as a single cloud
@@ -57,15 +59,15 @@ Gstr_synopsis = """
         shift non-base clouds accordingly. Finally, it can also loop non-base
         clouds over square spirals about the base-cloud. The base-cloud is
         simply the first cloud input into the system.
-        
+
     ARGUMENTS
-    
+
         -m <cloudFileLst>
-        A comma separated list of cloud files to read. Each cloud file will 
+        A comma separated list of cloud files to read. Each cloud file will
         be plotted and its centroid cloud determined.
 
         -r <rotations>
-        The number of rotations for the confidence boundary for each cloud, 
+        The number of rotations for the confidence boundary for each cloud,
         evenly spread out between 0...90 degrees.
 
         -s <stdWidth>
@@ -76,12 +78,18 @@ Gstr_synopsis = """
         "on top" of the point plots with a default zorder=3. By specifying
         a different zorder (such as '-z 1'), the boundary can be drawn below
         the point plots.
-        
-        -n 
+
+        -T
+        If specified, do not print title for plot.
+
+        -c
+        If specified, do not draw contour plot, but only show sample points.
+
+        -n
         If specified, will turn OFF clould normalization.
 
-        Default is to always normalize. Without normalizing, 
-        rotational skew can occur. Normalization adds extra operations 
+        Default is to always normalize. Without normalizing,
+        rotational skew can occur. Normalization adds extra operations
         (and hence time) to the projection calculations. This extra time
         is minimal, and normalization should probably be used in all cases.
 
@@ -90,41 +98,41 @@ Gstr_synopsis = """
         much more along one axis than another, this will result in a very
         "thin" boundary polygon.
 
-        -X 
+        -X
         If specified, plot convex hull boundaries.
 
         -A <centerMean>
         If specified, will turn ON asymmetrical deviations flag. The
         <centerMean> controls the concept of "center" for the asymmetrical
         deviations. The following options are understood:
-        
+
             'original' (default): std is calculated on a subset of original
                                   observations relative to the original mean
                                   of the main cloud.
-                                  
+
             'subset':             std is calculated relative to the mean
                                   of the subset.
-                                  
+
         -p <percentile>
         If specified, trigger a descriptive statistical analysis, using the
-        passed <percentile> as upper and lower deviation from the center 
-        mean.    
-        
+        passed <percentile> as upper and lower deviation from the center
+        mean.
+
         -M <marker>
         Set marker symbol to <marker>. Default = "*".
 
         -C <cloudColorLst> -K <kernelColorLst>
         A set of comma separated color specifiers, defining the colors of the
         point cloud and the kernel region respectively.
-        
-        -N <depth> -S <scale>  
+
+        -N <depth> -S <scale>
         If specified, will calculate and plot a range of shifted clouds. This
         is only applicable for cases where more than one cloud has been
         specified as input. The -N <depth> denotes the number of square
-        rotations to perform, and the -S <scale> the scale for each 
+        rotations to perform, and the -S <scale> the scale for each
         radial rotation.
 
-        -O <offsetX,offsetY>                   
+        -O <offsetX,offsetY>
         If specified, will shift non-base clouds by offset. This is useful for
         once-off tests.
 
@@ -132,14 +140,14 @@ Gstr_synopsis = """
         If specified, print an extent report that gives for each rotation
         the X, Y, XY, and X+Y projection extent. This is an approximation
         for the max/min extent angle for the given cloud.
-        
+
         -d
         If specified, pass a debug flag to the C_centroidCloud class that
         triggers additional reporting.
-                        
+
         -x or -h
         Print this help page.
-        
+
 """
 
 Gstr_cloudMatrixLst         = 'cloud.txt'
@@ -150,6 +158,8 @@ Gb_normalize                = True
 Gb_asymmetricalDeviations   = False
 Gb_usePercentiles           = False
 Gb_convexHullUse            = False
+Gb_titlePrint               = True
+Gb_contourPlot              = True
 G_f_percentile              = 25
 Gstr_centerMean             = 'original'
 Gb_axisEqual                = False
@@ -196,16 +206,16 @@ def cloud_normalize(aM):
 
 def convexHull_boundaryFind(ar_boundary):
     '''
-    For a given np array <ar_boundary>, deterime the convex hull 
+    For a given np array <ar_boundary>, deterime the convex hull
     (implicitly assuming 2D spaces).
-    
+
     Basically, this builds a polygon, finds the convex hull, and
     translates back to an np.array.
     '''
     return np.asarray( sgPolygon(ar_boundary).convex_hull.exterior )
 
 try:
-    opts, remargs   = getopt.getopt(sys.argv[1:], 'hxm:s:r:dez:naA:p:C:K:N:S:O:XM:')
+    opts, remargs   = getopt.getopt(sys.argv[1:], 'hxm:s:r:dez:naA:p:C:K:N:S:O:XM:Tc')
 except getopt.GetoptError:
     sys.exit(1)
 
@@ -215,6 +225,10 @@ for o, a in opts:
         sys.exit(1)
     if (o == '-X'):
         Gb_convexHullUse            = True
+    if (o == '-T'):
+        Gb_titlePrint               = False
+    if (o == '-c'):
+        Gb_contourPlot              = False
     if (o == '-m'):
         Gstr_cloudMatrixLst         = a
     if (o == '-M'):
@@ -273,9 +287,9 @@ poly                = []
 for cloud in range(0, len(l_cloudFile)):
     print("Reading '%s'..." % l_cloudFile[cloud])
     lC_cloud.append(
-                  C_centroidCloud(file      ='%s' % l_cloudFile[cloud], 
+                  C_centroidCloud(file      ='%s' % l_cloudFile[cloud],
                                   stdWidth  = G_f_stdWidth,
-                                  rotations = G_numRotations)        
+                                  rotations = G_numRotations)
                   )
     print("\tappending cloud matrix and norm vectors...")
     lM_cloudOrig.append(lC_cloud[cloud].cloud())
@@ -284,12 +298,12 @@ for cloud in range(0, len(l_cloudFile)):
     lv_norm.append(lv_normOrig[cloud])
     print("\tcreating boundary list holder...")
     ll_polygonPoints.append([])
-print("\nPreprocessing complete.\n")    
+print("\nPreprocessing complete.\n")
 
 # Now process the clouds, with possible iterative rotations
 if Gb_rotateClouds:
     l_rotaryPoints  = misc.neighbours_findFast(2, G_depth, includeOrigin=True)
-else:   
+else:
     l_rotaryPoints  = [ np.array((0,0)) ]
 
 v_nonBaseOffset = np.array( (G_f_nonBaseOffsetX, G_f_nonBaseOffsetY))
@@ -311,12 +325,12 @@ for reltran in l_rotaryPoints:
     axis('auto')
     if Gb_axisEqual:
         axis('equal')
-    grid() 
+    grid()
     for cloud in range(0, len(l_cloudFile)):
         print("\nProcessing '%s' containing %d points..." % \
                 (l_cloudFile[cloud], len(lM_cloud[cloud])))
         if cloud:
-            # all clouds except the base are displaced by the 
+            # all clouds except the base are displaced by the
             # current translation
             print("\ttranslating cloud '%s' by " % l_cloudFile[cloud], end="")
             print(reltran)
@@ -342,10 +356,10 @@ for reltran in l_rotaryPoints:
                 convexHull_boundaryFind(ll_polygonPoints[cloud])
         print("\t...")
         lM_cloud[cloud]         = lC_cloud[cloud].cloud()
-        p.append(plot(lM_cloud[cloud][:,0], lM_cloud[cloud][:,1], 
+        p.append(plot(lM_cloud[cloud][:,0], lM_cloud[cloud][:,1],
                         color=l_cloudColor[cloud], marker=G_marker, ls='None',
                         zorder = 1))
-        poly.append(deviation_plot(ll_polygonPoints[cloud], l_kernelColor[cloud])) 
+        if Gb_contourPlot: poly.append(deviation_plot(ll_polygonPoints[cloud], l_kernelColor[cloud]))
         if Gb_extentReport: print(C_cloud[cloud].projectionExtent_report())
 
     if len(l_cloudFile) > 1:
@@ -360,7 +374,7 @@ for reltran in l_rotaryPoints:
             		os.path.splitext(os.path.basename(l_cloudFile[g2]))[0],
             		reltran[0], reltran[1]
             		)
-            title(_str_title)
+            if Gb_titlePrint: title(_str_title)
             # print("group 1 = %d" % g1)
             # print("group 2 = %d" % g2)
             v_tstat, v_pval = stats.ttest_ind(lM_cloud[g1], lM_cloud[g2], equal_var = False)
@@ -372,7 +386,7 @@ for reltran in l_rotaryPoints:
             else:
                 v_ind                           = reltran/v_reltranScale + \
                                                         v_indoffset - v_nonBaseOffset
-            
+
             M_pval[v_ind[0],v_ind[1]]           = f_pvalMin
             M_pvalmNorm[v_ind[0],v_ind[1]]      = f_pvalmNorm
             M_pvalvNorm[v_ind[0],v_ind[1]]      = f_pvalvNorm
@@ -396,7 +410,7 @@ for reltran in l_rotaryPoints:
             _str_title = '%s' % (
                         os.path.splitext(os.path.basename(l_cloudFile[0]))[0],
                         )
-            title(_str_title)
+            if Gb_titlePrint: title(_str_title)
             misc.mkdir(_str_title)
             print("\tsaving figure '%s'..." % _str_title)
             savefig('%s/%s.pdf' % (_str_title, _str_title), bbox_inches=0)
@@ -406,4 +420,3 @@ for reltran in l_rotaryPoints:
 
 
     # show()
-
