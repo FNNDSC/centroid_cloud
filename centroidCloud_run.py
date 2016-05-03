@@ -37,6 +37,7 @@ Gstr_synopsis = """
                                 -N <depth> -S <scale>                   \\
                                 -O <offsetX,offsetY>                    \\
                                 -e -d -X                                \\
+                                -D                                      \\
                                 -x -h]
 
     DESCRIPTION
@@ -65,6 +66,9 @@ Gstr_synopsis = """
         -m <cloudFileLst>
         A comma separated list of cloud files to read. Each cloud file will
         be plotted and its centroid cloud determined.
+        
+        -D 
+        Draw the figure results to screen (in addition to saving).
 
         -r <rotations>
         The number of rotations for the confidence boundary for each cloud,
@@ -151,6 +155,7 @@ Gstr_synopsis = """
 """
 
 Gstr_cloudMatrixLst         = 'cloud.txt'
+Gb_draw                     = False
 Gb_saveFig                  = False
 Gb_debugCloud               = False
 Gb_extentReport             = False
@@ -215,7 +220,7 @@ def convexHull_boundaryFind(ar_boundary):
     return np.asarray( sgPolygon(ar_boundary).convex_hull.exterior )
 
 try:
-    opts, remargs   = getopt.getopt(sys.argv[1:], 'hxm:s:r:dez:naA:p:C:K:N:S:O:XM:Tc')
+    opts, remargs   = getopt.getopt(sys.argv[1:], 'hxm:s:r:dez:naA:p:C:K:N:S:O:XM:TcD')
 except getopt.GetoptError:
     sys.exit(1)
 
@@ -223,6 +228,10 @@ for o, a in opts:
     if (o == '-x' or o == '-h'):
         synopsis_show()
         sys.exit(1)
+    if (o == '-D'):
+        Gb_draw                     = True
+    if (o == '-F'):
+        Gb_saveFig                  = True
     if (o == '-X'):
         Gb_convexHullUse            = True
     if (o == '-T'):
@@ -396,27 +405,29 @@ for reltran in l_rotaryPoints:
                 (l_cloudFile[g1], l_cloudFile[g2], f_pvalmNorm))
             print("\tp-val for comparison between normed groups '%s' and '%s' is %f" % \
                 (l_cloudFile[g1], l_cloudFile[g2], f_pvalvNorm))
-            print("\tsaving figure '%s'..." % _str_title)
-            misc.mkdir(_str_title)
-            #aspectRatio_square(aspect=1)
-            savefig('%s/%s.pdf' % (_str_title, _str_title), bbox_inches=0)
-            savefig('%s/%s.png' % (_str_title, _str_title), bbox_inches=0)
-            # Save pval matrices on each loop... allows for some data storage
-            # even while processing is incomplete.
-            np.savetxt('%s/%s-pval.txt'      % (_str_title, _str_title), M_pval,          fmt='%10.7f')
-            np.savetxt('%s/%s-pvalmNorm.txt' % (_str_title, _str_title), M_pvalmNorm,     fmt='%10.7f')
-            np.savetxt('%s/%s-pvalvNorm.txt' % (_str_title, _str_title), M_pvalvNorm,     fmt='%10.7f')
+            if Gb_saveFig:
+                print("\tsaving figure '%s'..." % _str_title)
+                misc.mkdir(_str_title)
+                #aspectRatio_square(aspect=1)
+                savefig('%s/%s.pdf' % (_str_title, _str_title), bbox_inches=0)
+                savefig('%s/%s.png' % (_str_title, _str_title), bbox_inches=0)
+                # Save pval matrices on each loop... allows for some data storage
+                # even while processing is incomplete.
+                np.savetxt('%s/%s-pval.txt'      % (_str_title, _str_title), M_pval,          fmt='%10.7f')
+                np.savetxt('%s/%s-pvalmNorm.txt' % (_str_title, _str_title), M_pvalmNorm,     fmt='%10.7f')
+                np.savetxt('%s/%s-pvalvNorm.txt' % (_str_title, _str_title), M_pvalvNorm,     fmt='%10.7f')
     else:
-            _str_title = '%s' % (
+            if Gb_saveFig:
+                _str_title = '%s' % (
                         os.path.splitext(os.path.basename(l_cloudFile[0]))[0],
-                        )
-            if Gb_titlePrint: title(_str_title)
-            misc.mkdir(_str_title)
-            print("\tsaving figure '%s'..." % _str_title)
-            savefig('%s/%s.pdf' % (_str_title, _str_title), bbox_inches=0)
-            savefig('%s/%s.png' % (_str_title, _str_title), bbox_inches=0)
+                            )
+                if Gb_titlePrint: title(_str_title)
+                misc.mkdir(_str_title)
+                print("\tsaving figure '%s'..." % _str_title)
+                savefig('%s/%s.pdf' % (_str_title, _str_title), bbox_inches=0)
+                savefig('%s/%s.png' % (_str_title, _str_title), bbox_inches=0)
 
     indexTotal += 1
 
 
-    # show()
+    if Gb_draw: show()
